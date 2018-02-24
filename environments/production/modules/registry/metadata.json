@@ -1,0 +1,34 @@
+{
+  "name": "puppetlabs-registry",
+  "version": "2.0.1",
+  "author": "Puppet Inc",
+  "summary": "This module provides a native type and provider to manage keys and values in the Windows Registry",
+  "license": "Apache-2.0",
+  "source": "git://github.com/puppetlabs/puppetlabs-registry.git",
+  "project_page": "http://links.puppet.com/registry-module",
+  "issues_url": "https://github.com/puppetlabs/puppetlabs-registry/issues",
+  "dependencies": [
+  
+  ],
+  "data_provider": null,
+  "operatingsystem_support": [
+    {
+      "operatingsystem": "Windows",
+      "operatingsystemrelease": [
+        "Server 2008",
+        "Server 2008 R2",
+        "Server 2012",
+        "Server 2012 R2",
+        "7",
+        "8"
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "name": "puppet",
+      "version_requirement": ">= 4.7.0 < 6.0.0"
+    }
+  ],
+  "description": "This module provides a native type and provider to manage keys and values in the Windows Registry"
+}
