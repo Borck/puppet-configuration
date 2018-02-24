@@ -33,10 +33,10 @@ node default {
     registry_key { 'HKCR\Directory\Background\shell\git_shell': ensure => present, }
     registry_value { 'HKCR\Directory\Background\shell\git_shell\LegacyDisable': ensure => present, type => string, }
 
-
+    # installing tortoisegit can fail if non-package-version is currently installed
     package { 'tortoisegit': ensure => latest, }
-    package { 'tortoisesvn': ensure => latest, }
 
+    package { 'tortoisesvn': ensure => latest, }
 
 
 
@@ -80,6 +80,10 @@ node default {
     ########## Others #########################################################
     ###########################################################################
     notice('applying other tools ...')
+
+    package { 'firefox': ensure => latest, }
+
+    package { 'Sysinternals': ensure => latest, }
 
     package { 'virtualbox': ensure => latest, }
     package { 'virtualbox.extensionpack': ensure => latest, }
@@ -185,11 +189,38 @@ node default {
     # hide 'Pictures' in 'This PC'
     registry_value { 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{0ddd015d-b06c-45d5-8c4c-f59713854639}\PropertyBag\ThisPCPolicy': ensure => present, type => string, data => 'Hide' }
     # hide 'Videos' in 'This PC'
+
     registry_value { 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag\ThisPCPolicy': ensure => present, type => string, data => 'Hide' }
 
     #enable checkboxes, see: https://www.tenforums.com/attachments/tutorials/35188d1441136772-turn-off-select-items-using-check-boxes-windows-10-a-select_items_with_check_boxes.png
-    # registry_value { 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\AutoCheckSelect': type => dword, data => 0x00000001 }
+    # registry_value { 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\AutoCheckSelect': ensure => present, type => dword, data => 0x00000001 }
 
+    # add quick merge to context menu of reg-files
+    registry_key   { 'HKCR\regfile\shell\quickmerge\command': ensure => present, }
+    registry_value { 'HKCR\regfile\shell\quickmerge\\': ensure => present, type => string, data => 'Zusammenführen (Ohne Bestätigung)' }
+    registry_value { 'HKCR\regfile\shell\quickmerge\Extended': ensure => present, type => string, data => '' }
+    registry_value { 'HKCR\regfile\shell\quickmerge\NeverDefault': ensure => present, type => string, data => '' }
+    registry_value { 'HKCR\regfile\shell\quickmerge\command\\': ensure => present, type => string, data => 'regedit.exe /s "%1"' }
+
+    # add 'Restart Explorer' to context menu of desktop
+    registry_key   { 'HKCR\DesktopBackground\Shell\Restart Explorer\command': ensure => present, }
+    registry_value { 'HKCR\DesktopBackground\Shell\Restart Explorer\icon': ensure => present, type => string, data => 'explorer.exe' }
+    registry_value { 'HKCR\DesktopBackground\Shell\Restart Explorer\command\\': ensure => present, type => string, data => 'TSKILL EXPLORER' }
+
+    # keyboard: remap capslock to shift
+    registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout\Scancode Map': ensure => present, type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
+
+    # Disable AutoPlay for removable media drives for CurrentUser
+    # registry_value { 'HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun': ensure => present, type => dword, data => '00 00 00 b5' }
+    # registry_value { 'HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun': ensure => absent, type => dword,  }
+
+    # Hide_Message_-_“Es_konnten_nicht_alle_Netzlaufwerke_wiederhergestellt_werden”
+    registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\NetworkProvider\RestoreConnection': ensure => present, type => dword, data => '0x00000000' }
+
+    # Remove 'Shortcut' from new links
+    # registry_value { 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\link': ensure => present, type => binary, data => '00 00 00 00' }
+    # backup:
+    #   registry_value { 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\link': ensure => present, type => binary, data => '1e 00 00 00' }
 
   }
 }
