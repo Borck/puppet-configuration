@@ -8,7 +8,6 @@ node default {
     ###########################################################################
     ########## Package repositories ###########################################
     ###########################################################################
-    notice('applying package repositories ...')
 
     # set chocolatey as default package provider
     include chocolatey
@@ -18,7 +17,6 @@ node default {
     ###########################################################################
     ########## Version control ################################################
     ###########################################################################
-    notice('applying version control tools ...')
 
     # git
     package { 'git': ensure => latest, }
@@ -44,9 +42,27 @@ node default {
     ########## Visual Studio Code + NotepadReplacer ###########################
     ###########################################################################
     # code for Visual Studio (not Visual Studio Code is at the and of this script)
-    notice('applying Visual Studio Code ...')
 
     package { 'visualstudiocode': ensure => latest, }
+
+    #https://forge.puppet.com/tragiccode/vscode
+    # class { 'vscode':
+    #   package_ensure              => 'present',
+    #   #vscode_download_url           => 'https://company-name.s3.amazonaws.com/binaries/vscode-latest.exe',
+    #   #vscode_download_absolute_path => 'C:\\Windows\\Temp',
+    #   create_desktop_icon         => false,
+    #   create_quick_launch_icon    => false,
+    #   create_context_menu_files   => true,
+    #   create_context_menu_folders => true,
+    #   add_to_path                 => true,
+    #   #icon_theme                    => 'vs-seti',
+    #   #color_theme                   => 'Monokai Dimmed',
+    # }
+
+    # vscode_extension { 'jpogran.puppet-vscode': ensure  => 'present', require => Class['vscode'], }
+    # vscode_extension { 'ms-vscode.csharp': ensure  => 'present', require => Class['vscode'], }
+    # vscode_extension { 'Gimly81.matlab': ensure  => 'present', require => Class['vscode'], }
+    # vscode_extension { 'Lua': ensure  => 'present', require => Class['vscode'], }
 
     # preferred symlink syntax
     file { 'C:\ProgramData\NotepadReplacer':
@@ -68,33 +84,47 @@ node default {
 
 
     ###########################################################################
-    ########## SSH/FTP ########################################################
+    ########## Development ####################################################
     ###########################################################################
-    notice('applying SSH/FTP tools ...')
 
-    package { 'putty': ensure => latest, }
-    package { 'winscp': ensure => latest, }
+    package { 'jdk8': ensure => latest, }
+    package { 'eclipse': ensure => latest, }
 
-
-    ###########################################################################
-    ########## Others #########################################################
-    ###########################################################################
-    notice('applying other tools ...')
-
-    package { 'firefox': ensure => latest, }
-
-    package { 'Sysinternals': ensure => latest, }
+    package { 'make': ensure => present, }
+    package { 'cmake': ensure => present, }
 
     package { 'virtualbox': ensure => latest, }
     package { 'virtualbox.extensionpack': ensure => latest, }
-    package { 'jdk8': ensure => latest, }
+
+    package { 'Sysinternals': ensure => latest, }
 
 
-    class {'sevenzip':
-      package_ensure => 'latest',
-      package_name   => ['7zip'],
-      prerelease     => false,
-    }
+
+    ###########################################################################
+    ########## Networking #####################################################
+    ###########################################################################
+
+    package { 'putty': ensure => latest, }
+    package { 'winscp': ensure => latest, }
+    package { 'wireshark': ensure => latest, }
+
+
+    ###########################################################################
+    ########## Office #########################################################
+    ###########################################################################
+
+    package { 'firefox': ensure => latest, }
+
+    class {'sevenzip': package_ensure => 'latest', package_name => ['7zip'], prerelease => false, }
+
+    package { 'ghostscript': ensure => present, }
+    package { 'miktex': ensure => present, }
+    package { 'texstudio': ensure => latest, }
+    package { 'jabref': ensure => latest, }
+
+    package { 'adobereader': ensure => absent, } # adobe acrobat is installed
+
+    package { 'inkscape': ensure => latest, }
 
     package { 'vlc': ensure => latest, }
     registry_key { 'HKCR\Directory\shell\AddToPlaylistVLC': ensure => present, }
@@ -102,32 +132,17 @@ node default {
     registry_key { 'HKCR\Directory\shell\PlayWithVLC': ensure => present, }
     registry_value { 'HKCR\Directory\shell\PlayWithVLC\LegacyDisable': ensure => present, type => string, }
 
+
+
     ###########################################################################
-    ########## IDE's ##########################################################
+    ########## visual studio + unity ##########################################
     ###########################################################################
-    #notice('applying visual studio ...')
 
-    #https://forge.puppet.com/puppet/visualstudio
-    #Only Supports 2012?
-    #Install module on server with: puppet module install puppet-visualstudio --version 3.0.1
-    /*visualstudio { 'visual studio':
-      ensure  => present,
-      version => '2012',
-      edition => 'Enterprise',
-      #license_key => 'XXX-XXX-XXX-XXX-XXX',
+    package { 'visualstudio2017enterprise': ensure => present, }
+    package { 'visualsvn': ensure => latest, }
+    package { 'resharper': ensure => latest, }
 
-      #components => ?
-      #The list components, tools and utilities that can be installed as part of the visual studio installation.
-
-      #deployment_root => ?
-      #Network location where the visual studio packages are located
-    }*/
-
-#    package { 'visualstudio2017enterprise': ensure => latest, }
-#    package { 'visualsvn': ensure => latest, }
-#    package { 'resharper': ensure => latest, }
-
-#    package { 'unity': ensure => latest, }
+    # package { 'unity': ensure => latest, }
 
 
 
@@ -211,7 +226,7 @@ node default {
     registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout\Scancode Map': ensure => present, type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
 
     # Disable AutoPlay for removable media drives for CurrentUser
-    # registry_value { 'HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun': ensure => present, type => dword, data => '00 00 00 b5' }
+    # registry_value { 'HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun': ensure => present, type => dword, data => 0x000000b5, }
     # registry_value { 'HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun': ensure => absent, type => dword,  }
 
     # Hide_Message_-_“Es_konnten_nicht_alle_Netzlaufwerke_wiederhergestellt_werden”
