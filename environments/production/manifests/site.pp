@@ -43,7 +43,7 @@ node default {
     ###########################################################################
     # code for Visual Studio (not Visual Studio Code is at the and of this script)
 
-    package { 'visualstudiocode': ensure => latest, }
+    package { 'visualstudiocode': ensure => latest, install_options => ['/NoDesktopIcon', '/NoQuicklaunchIcon'], }
 
     #https://forge.puppet.com/tragiccode/vscode
     # class { 'vscode':
@@ -88,13 +88,14 @@ node default {
     ###########################################################################
 
     package { 'jdk8': ensure => latest, }
-    package { 'eclipse': ensure => latest, }
+    package { 'eclipse': ensure => latest, install_options => ['--params', '"/Multi-User"'], }
 
     package { 'make': ensure => present, }
-    package { 'cmake': ensure => present, }
+    package { 'cmake': ensure => latest, install_options => ['--installargs', '"DESKTOP_SHORTCUT_REQUESTED=0"'], }
 
-    package { 'virtualbox': ensure => latest, }
-    package { 'virtualbox.extensionpack': ensure => latest, }
+    package { 'virtualbox': ensure => latest, install_options => ['/NoDesktopShortcut', '/NoQuickLaunch'], }
+    # virtualbox.extensionpack is included in package virtualbox
+    # package { 'virtualbox.extensionpack': ensure => latest, }
 
     package { 'Sysinternals': ensure => latest, }
 
@@ -132,7 +133,8 @@ node default {
     registry_key { 'HKCR\Directory\shell\PlayWithVLC': ensure => present, }
     registry_value { 'HKCR\Directory\shell\PlayWithVLC\LegacyDisable': ensure => present, type => string, }
 
-
+    # rainmeter is unofficial and not a silent installer
+    # package { 'rainmeter': ensure => latest, }
 
     ###########################################################################
     ########## visual studio + unity ##########################################
