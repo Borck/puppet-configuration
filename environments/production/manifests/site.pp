@@ -20,7 +20,6 @@ node default {
 
     # git
     package { 'git': ensure => latest, }
-
     # remove git from context menu, tortoisegit will replace it
     registry_key { 'HKCR\Directory\shell\git_gui': ensure => present, }
     registry_value { 'HKCR\Directory\shell\git_gui\LegacyDisable': ensure => present, type => string, }
@@ -31,10 +30,12 @@ node default {
     registry_key { 'HKCR\Directory\Background\shell\git_shell': ensure => present, }
     registry_value { 'HKCR\Directory\Background\shell\git_shell\LegacyDisable': ensure => present, type => string, }
 
-    # installing tortoisegit can fail if non-package-version is currently installed
+    # installing tortoisegit can fail if non-package-version is installed
     package { 'tortoisegit': ensure => latest, }
 
     package { 'tortoisesvn': ensure => latest, }
+
+    package { 'sourcetree': ensure => latest, }
 
 
 
@@ -99,6 +100,8 @@ node default {
 
     package { 'Sysinternals': ensure => latest, }
 
+    package { 'wget': ensure => latest, }
+
 
 
     ###########################################################################
@@ -110,11 +113,12 @@ node default {
     package { 'wireshark': ensure => latest, }
 
 
+
     ###########################################################################
     ########## Office #########################################################
     ###########################################################################
 
-    package { 'firefox': ensure => latest, }
+    package { 'firefox': ensure => present, } #firefox have a very silent update mechanism
 
     class {'sevenzip': package_ensure => 'latest', package_name => ['7zip'], prerelease => false, }
 
@@ -125,6 +129,8 @@ node default {
 
     package { 'adobereader': ensure => absent, } # adobe acrobat is installed
 
+    package { 'dropbox': ensure => latest, }
+    
     package { 'inkscape': ensure => latest, }
 
     package { 'vlc': ensure => latest, }
@@ -136,15 +142,36 @@ node default {
     # rainmeter is unofficial and not a silent installer
     # package { 'rainmeter': ensure => latest, }
 
+    package { 'itunes': ensure => latest, }
+
     ###########################################################################
     ########## visual studio + unity ##########################################
     ###########################################################################
 
     package { 'visualstudio2017enterprise': ensure => present, }
+
+    package { 'visualstudio2017-workload-azure': ensure => present, }
+    package { 'visualstudio2017-workload-data': ensure => present, }
+    package { 'visualstudio2017-workload-manageddesktop': ensure => present, }
+    package { 'visualstudio2017-workload-nativecrossplat': ensure => latest, }
+    package { 'visualstudio2017-workload-nativedesktop': ensure => latest, }
+    package { 'visualstudio2017-workload-netcoretools': ensure => present, }
+    package { 'visualstudio2017-workload-universal': ensure => present, }
+    package { 'visualstudio2017-workload-vctools': ensure => present, }
+    package { 'visualstudio2017-workload-visualstudioextension': ensure => present, }
+
     package { 'visualsvn': ensure => latest, }
+
+    # jetbrains
     package { 'resharper': ensure => latest, }
+    package { 'dotpeek': ensure => latest, } # decompiler
+    package { 'dotcover': ensure => latest, } # unit test runner and code coverage
+    package { 'dottrace': ensure => latest, } # performance profiler
+    package { 'dotmemory': ensure => latest, } # memory profiler
 
     # package { 'unity': ensure => latest, }
+    # Game development with Unity workload for Visual Studio 2017
+    # package { 'visualstudio2017-workload-managedgame': ensure => latest, }
 
 
 
@@ -228,16 +255,14 @@ node default {
     registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout\Scancode Map': ensure => present, type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
 
     # Disable AutoPlay for removable media drives for CurrentUser
-    # registry_value { 'HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun': ensure => present, type => dword, data => 0x000000b5, }
-    # registry_value { 'HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun': ensure => absent, type => dword,  }
+    registry_value { 'HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun': ensure => present, type => dword, data => 0x000000b5,  }
 
     # Hide_Message_-_“Es_konnten_nicht_alle_Netzlaufwerke_wiederhergestellt_werden”
     registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\NetworkProvider\RestoreConnection': ensure => present, type => dword, data => '0x00000000' }
 
     # Remove 'Shortcut' from new links
     # registry_value { 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\link': ensure => present, type => binary, data => '00 00 00 00' }
-    # backup:
-    #   registry_value { 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\link': ensure => present, type => binary, data => '1e 00 00 00' }
+    # backup: data => '1e 00 00 00'
 
   }
 }
