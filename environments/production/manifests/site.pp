@@ -98,9 +98,16 @@ node default {
     # virtualbox.extensionpack is included in package virtualbox
     # package { 'virtualbox.extensionpack': ensure => latest, }
 
-    package { 'Sysinternals': ensure => latest, }
+    package { 'sandboxie': ensure => latest, }
 
-    package { 'wget': ensure => latest, }
+    package { 'hxd': ensure => present, }
+
+    # inspecting PE formatted binaries such aswindows EXEs and DLLs. 
+    package { 'pestudio': ensure => present, }
+    
+    package { 'regfromapp': ensure => present, }
+
+    package { 'Sysinternals': ensure => present, }
 
 
 
@@ -111,6 +118,35 @@ node default {
     package { 'putty': ensure => latest, }
     package { 'winscp': ensure => latest, }
     package { 'wireshark': ensure => latest, }
+    package { 'CloseTheDoor': ensure => present, } # close tcp/udp ports
+
+    package { 'curl': ensure => present, }
+    package { 'wget': ensure => present, }
+
+
+
+    ###########################################################################
+    ########## Media tools ####################################################
+    ###########################################################################
+
+    package { 'caesium.install': ensure => present, }
+    package { 'inkscape': ensure => latest, }
+    package { 'handbrake': ensure => present, }
+
+    package { 'vlc': ensure => latest, }
+    registry_key { 'HKCR\Directory\shell\AddToPlaylistVLC': ensure => present, }
+    registry_value { 'HKCR\Directory\shell\AddToPlaylistVLC\LegacyDisable': ensure => present, type => string, }
+    registry_key { 'HKCR\Directory\shell\PlayWithVLC': ensure => present, }
+    registry_value { 'HKCR\Directory\shell\PlayWithVLC\LegacyDisable': ensure => present, type => string, }
+
+    package { 'itunes': ensure => latest, }
+    package { 'mp3tag': ensure => present, }
+
+    package { 'audacity': ensure => present, }
+    package { 'audacity-lame': ensure => present, }
+
+    package { 'adobereader': ensure => absent, } # adobe acrobat is installed
+    package { 'Calibre ': ensure => present, } # convert * to  ebook
 
 
 
@@ -124,25 +160,26 @@ node default {
 
     package { 'ghostscript': ensure => present, }
     package { 'miktex': ensure => present, }
-    package { 'texstudio': ensure => latest, }
-    package { 'jabref': ensure => latest, }
+    package { 'texstudio': ensure => present, }
+    package { 'jabref': ensure => present, }
 
-    package { 'adobereader': ensure => absent, } # adobe acrobat is installed
 
-    package { 'dropbox': ensure => latest, }
+    # package { 'dropbox': ensure => present, }
+
+    package { 'capture2text': ensure => present, } # screenshot to text
+    package { 'jcpicker': ensure => present, } # screenshot to text
+    package { 'screentogif': ensure => present, }
+    package { 'AutoHotKey': ensure => present, }
     
-    package { 'inkscape': ensure => latest, }
+    package { 'bulkrenameutility': ensure => present, }
+    package { 'dupeguru': ensure => present, }
+    package { 'windirstat': ensure => present, }
+    package { 'junction-link-magic': ensure => present, }
 
-    package { 'vlc': ensure => latest, }
-    registry_key { 'HKCR\Directory\shell\AddToPlaylistVLC': ensure => present, }
-    registry_value { 'HKCR\Directory\shell\AddToPlaylistVLC\LegacyDisable': ensure => present, type => string, }
-    registry_key { 'HKCR\Directory\shell\PlayWithVLC': ensure => present, }
-    registry_value { 'HKCR\Directory\shell\PlayWithVLC\LegacyDisable': ensure => present, type => string, }
+    package { 'win32diskimager': ensure => present, }
 
     # rainmeter is unofficial and not a silent installer
     # package { 'rainmeter': ensure => latest, }
-
-    package { 'itunes': ensure => latest, }
 
     ###########################################################################
     ########## visual studio + unity ##########################################
@@ -153,8 +190,8 @@ node default {
     package { 'visualstudio2017-workload-azure': ensure => present, }
     package { 'visualstudio2017-workload-data': ensure => present, }
     package { 'visualstudio2017-workload-manageddesktop': ensure => present, }
-    package { 'visualstudio2017-workload-nativecrossplat': ensure => latest, }
-    package { 'visualstudio2017-workload-nativedesktop': ensure => latest, }
+    package { 'visualstudio2017-workload-nativecrossplat': ensure => present, }
+    package { 'visualstudio2017-workload-nativedesktop': ensure => present, }
     package { 'visualstudio2017-workload-netcoretools': ensure => present, }
     package { 'visualstudio2017-workload-universal': ensure => present, }
     package { 'visualstudio2017-workload-vctools': ensure => present, }
@@ -176,8 +213,9 @@ node default {
 
 
     ###########################################################################
-    ########## Context menu extensions ########################################
+    ########## System ########################################
     ###########################################################################
+    package { 'WindowsRepair': ensure => present, }
 
     #add 'command prompt' to context menu of folders
     registry_key   { 'HKCR\Directory\ContextMenus\MenuCmd\shell\open\command': ensure => present, }
@@ -250,6 +288,12 @@ node default {
     registry_key   { 'HKCR\DesktopBackground\Shell\Restart Explorer\command': ensure => present, }
     registry_value { 'HKCR\DesktopBackground\Shell\Restart Explorer\icon': ensure => present, type => string, data => 'explorer.exe' }
     registry_value { 'HKCR\DesktopBackground\Shell\Restart Explorer\command\\': ensure => present, type => string, data => 'TSKILL EXPLORER' }
+
+    # remove 'Add to library' from context menu
+    registry_key   { 'HKCR\HKEY_CLASSES_ROOT\Folder\ShellEx\ContextMenuHandlers\Library Location': ensure => absent, }
+    # backup:
+    # registry_value { 'HKCR\HKEY_CLASSES_ROOT\Folder\ShellEx\ContextMenuHandlers\Library Location\\': ensure => present, type => string, data => '{3dad6c5d-2167-4cae-9914-f99e41c12cfa}' }
+
 
     # keyboard: remap capslock to shift
     registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout\Scancode Map': ensure => present, type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
