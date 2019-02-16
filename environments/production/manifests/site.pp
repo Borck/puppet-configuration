@@ -109,7 +109,8 @@ node default {
     registry_key { 'HKCR\Directory\shell\PlayWithVLC': ensure => present, }
     registry_value { 'HKCR\Directory\shell\PlayWithVLC\LegacyDisable': ensure => present, type => string, }
 
-    package { 'inkscape': ensure => present, }
+    # disabled because 'present' and 'latest' causes errors and downloading setup exe each time, which takes around 70 s
+    # package { 'inkscape': ensure => present, }
 
     package { 'caesium.install': ensure => present, }
     file { 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Caesium\Caesium - Image Converter.exe':
