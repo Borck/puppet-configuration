@@ -24,7 +24,7 @@ Puppet::Type.newtype(:registry_key) do
 EOT
 
   def self.title_patterns
-    [ [ /^(.*?)\Z/m, [ [ :path, lambda{|x| x} ] ] ] ]
+    [ [ /^(.*?)\Z/m, [ [ :path ] ] ] ]
   end
 
   ensurable
@@ -103,7 +103,7 @@ EOT
 
     # get the "should" names of registry values associated with this key
     should_values = catalog.relationship_graph.direct_dependents_of(self).select {|dep| dep.type == :registry_value }.map do |reg|
-      PuppetX::Puppetlabs::Registry::RegistryValuePath.new(reg.parameter(:path).value).valuename
+      PuppetX::Puppetlabs::Registry::RegistryValuePath.new(reg.parameter(:path).value).valuename.downcase
     end
 
     # get the "is" names of registry values associated with this key

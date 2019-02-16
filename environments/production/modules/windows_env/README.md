@@ -1,3 +1,6 @@
+**This module has been moved to puppet/windows_env. This version is no longer maintained.**
+
+
 windows_env
 ===========
 

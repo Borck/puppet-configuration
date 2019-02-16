@@ -30,84 +30,33 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
   has_feature :holdable
   #has_feature :package_settings
 
+  require Pathname.new(__FILE__).dirname + '../../../' + 'puppet_x/chocolatey/chocolatey_common'
+  include PuppetX::Chocolatey::ChocolateyCommon
+
+  commands :chocolatey => PuppetX::Chocolatey::ChocolateyCommon.chocolatey_command
+
   def initialize(value={})
     super(value)
-    @compiled_choco = nil
   end
-
-  def self.file_exists?(path)
-    File.exist?(path)
-  end
-
-  def self.chocolatey_command
-    if Puppet::Util::Platform.windows?
-      #default_location = $::choco_installpath || ENV['ALLUSERSPROFILE'] + '\chocolatey'
-      chocopath = ('C:\ProgramData\chocolatey' if file_exists?('C:\ProgramData\chocolatey\bin\choco.exe')) ||
-          (ENV['ChocolateyInstall'] if ENV['ChocolateyInstall'] && file_exists?("#{ENV['ChocolateyInstall']}\\bin\\choco.exe")) ||
-          ('C:\Chocolatey' if file_exists?('C:\Chocolatey\bin\choco.exe')) ||
-          "#{ENV['ALLUSERSPROFILE']}\\chocolatey"
-
-      chocopath += '\bin\choco.exe'
-    else
-      chocopath = 'choco.exe'
-    end
-
-    chocopath
-  end
-
-  def self.compiled_choco=(value)
-    @compiled_choco = value
-  end
-
-  # this ultimately determines if we are on the C# version of choco
-  # so commands can be adjusted accordingly
-  def self.choco_exe?
-    # call `choco -v` one time here and cache the result
-    # - new choco will output a single value e.g. `0.9.9`
-    # - old choco is going to return the default output e.g. `Please run chocolatey /?`
-    if @compiled_choco.nil?
-      execpipe(choco_ver_cmd) do |process|
-        process.each_line do |line|
-          line.chomp!
-          if line.empty?; next; end
-          if line.match(/Please run chocolatey.*/)
-            @compiled_choco = false
-          else
-            @compiled_choco = true
-          end
-        end
-      end
-    end
-
-    @compiled_choco
-  end
-
-  def self.choco_ver_cmd
-    args = []
-    args << '-v'
-
-    [command(:chocolatey), *args]
-  end
-
-  def self.set_env_chocolateyinstall
-    ENV['ChocolateyInstall'] = PuppetX::Chocolatey::ChocolateyInstall.install_path
-  end
-
-  def choco_exe?
-    self.class.choco_exe?
-  end
-
-  commands :chocolatey => chocolatey_command
 
   def print()
     notice("The value is: '${name}'")
   end
 
+  def self.is_compiled_choco?
+    Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon.choco_version) >= Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon::FIRST_COMPILED_CHOCO_VERSION)
+  end
+
+  def is_compiled_choco?
+    self.class.is_compiled_choco?
+  end
+
   def install
-    self.class.set_env_chocolateyinstall
+    PuppetX::Chocolatey::ChocolateyCommon.set_env_chocolateyinstall
+     choco_exe = is_compiled_choco?
 
     # always unhold on install
-    unhold if choco_exe?
+    unhold if choco_exe
 
     args = []
 
@@ -121,68 +70,83 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
       args << @resource[:name][/\A\S*/]
     else
       args.clear
-      if choco_exe?
+      if choco_exe
         args << 'upgrade'
       else
         args << 'update'
       end
 
       # Add the package version
-      args << @resource[:name][/\A\S*/] << '-version' << @resource[:ensure]
+      args << @resource[:name][/\A\S*/] << '--version' << @resource[:ensure]
     end
 
-    if choco_exe?
+    if choco_exe
       args << '-y'
+    end
+
+    if @resource[:source]
+      args << '-source' << @resource[:source]
     end
 
     args << @resource[:install_options]
 
-    if @resource[:source]
-      args << '-source' << @resource[:source]
+    if Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon.choco_version) >= Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon::MINIMUM_SUPPORTED_CHOCO_VERSION_EXIT_CODES)
+      args << '--ignore-package-exit-codes'
     end
 
     chocolatey(*args)
   end
 
   def uninstall
-    self.class.set_env_chocolateyinstall
+    PuppetX::Chocolatey::ChocolateyCommon.set_env_chocolateyinstall
+    choco_exe = is_compiled_choco?
 
     # always unhold on uninstall
-    unhold if choco_exe?
+    unhold if choco_exe
 
     args = 'uninstall', @resource[:name][/\A\S*/]
 
-    if choco_exe?
+    if choco_exe
       args << '-fy'
+    end
+
+    choco_version = Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon.choco_version)
+    if !choco_exe || choco_version >= Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon::MINIMUM_SUPPORTED_CHOCO_UNINSTALL_SOURCE)
+      if @resource[:source]
+        args << '-source' << @resource[:source]
+      end
     end
 
     args << @resource[:uninstall_options]
 
-    unless choco_exe?
-      if @resource[:source]
-        args << '-source' << @resource[:source]
-      end
+    if Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon.choco_version) >= Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon::MINIMUM_SUPPORTED_CHOCO_VERSION_EXIT_CODES)
+      args << '--ignore-package-exit-codes'
     end
 
     chocolatey(*args)
   end
 
   def update
-    self.class.set_env_chocolateyinstall
+    PuppetX::Chocolatey::ChocolateyCommon.set_env_chocolateyinstall
+    choco_exe = is_compiled_choco?
 
     # always unhold on upgrade
-    unhold if choco_exe?
+    unhold if choco_exe
 
-    if choco_exe?
+    if choco_exe
       args = 'upgrade', @resource[:name][/\A\S*/], '-y'
     else
       args = 'update', @resource[:name][/\A\S*/]
     end
 
-    args << @resource[:install_options]
-
     if @resource[:source]
       args << '-source' << @resource[:source]
+    end
+
+    args << @resource[:install_options]
+
+    if Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon.choco_version) >= Gem::Version.new(PuppetX::Chocolatey::ChocolateyCommon::MINIMUM_SUPPORTED_CHOCO_VERSION_EXIT_CODES)
+      args << '--ignore-package-exit-codes'
     end
 
     if self.query
@@ -211,7 +175,7 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
     args = []
     args << 'list'
     args << '-lo'
-    if choco_exe?
+    if is_compiled_choco?
       args << '-r'
     end
 
@@ -220,12 +184,13 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
 
   def self.instances
     packages = []
-    set_env_chocolateyinstall
+    PuppetX::Chocolatey::ChocolateyCommon.set_env_chocolateyinstall
+    choco_exe = is_compiled_choco?
     begin
       pins = []
-      pin_output = nil unless choco_exe?
+      pin_output = nil unless choco_exe
       #don't add -r yet, as there is an issue in 0.9.9.9/0.9.9.10 that returns full list plus pins
-      pin_output = Puppet::Util::Execution.execute([command(:chocolatey), 'pin', 'list']) if choco_exe?
+      pin_output = Puppet::Util::Execution.execute([command(:chocolatey), 'pin', 'list']) if choco_exe
       unless pin_output.nil?
         pin_output.split("\n").each { |pin| pins << pin.split('|')[0] }
       end
@@ -234,7 +199,8 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
         process.each_line do |line|
           line.chomp!
           if line.empty? or line.match(/Reading environment variables.*/); next; end
-          if choco_exe?
+          raise Puppet::Error, "At least one source must be enabled." if line.match(/Unable to search for packages.*/)
+          if choco_exe
             values = line.split('|')
           else
             values = line.split(' ')
@@ -251,7 +217,8 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
   end
 
   def latestcmd
-    if choco_exe?
+    choco_exe = is_compiled_choco?
+    if choco_exe
       args = 'upgrade', '--noop', @resource[:name][/\A\S*/], '-r'
     else
       args = 'version', @resource[:name][/\A\S*/]
@@ -261,7 +228,7 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
       args << '-source' << @resource[:source]
     end
 
-    unless choco_exe?
+    unless choco_exe
       args << '| findstr /R "latest" | findstr /V "latestCompare"'
     end
 
@@ -270,13 +237,13 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
 
   def latest
     package_ver = ''
-    self.class.set_env_chocolateyinstall
+    PuppetX::Chocolatey::ChocolateyCommon.set_env_chocolateyinstall
     begin
       execpipe(latestcmd) do |process|
         process.each_line do |line|
           line.chomp!
           if line.empty?; next; end
-          if choco_exe?
+          if is_compiled_choco?
             values = line.split('|')
             package_ver = values[2]
           else
@@ -294,7 +261,7 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
   end
 
   def hold
-    raise ArgumentError, 'Only choco v0.9.9+ can use ensure => held' unless choco_exe?
+    raise ArgumentError, 'Only choco v0.9.9+ can use ensure => held' unless is_compiled_choco?
 
     install
 
@@ -304,7 +271,7 @@ Puppet::Type.type(:package).provide(:chocolatey, :parent => Puppet::Provider::Pa
   end
 
   def unhold
-    return unless choco_exe?
+    return unless is_compiled_choco?
 
     Puppet::Util::Execution.execute([command(:chocolatey), 'pin','remove', '-n', @resource[:name][/\A\S*/]], :failonfail => false)
   end

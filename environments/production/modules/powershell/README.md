@@ -34,7 +34,7 @@ The powershell module adapts the Puppet [exec](http://docs.puppet.com/references
 
 ~~~ puppet
 exec { 'RESOURCENAME':
-  command   => '$(SOMECOMMAND)',
+  command   => 'SOMECOMMAND',
   provider  => powershell,
 }
 ~~~
@@ -47,7 +47,7 @@ For instance, to rename the Guest account:
 
 ~~~ puppet
 exec { 'rename-guest':
-  command   => '$(Get-WMIObject Win32_UserAccount -Filter "Name=\'guest\'").Rename("new-guest")',
+  command   => '(Get-WMIObject Win32_UserAccount -Filter "Name=\'guest\'").Rename("new-guest")',
   unless    => 'if (Get-WmiObject Win32_UserAccount -Filter "Name=\'guest\'") { exit 1 }',
   provider  => powershell,
 }
@@ -177,7 +177,7 @@ Lists the expected return code(s). If the executed command returns something els
 
 ##### `timeout`
 
-Sets the maximum time in seconds that the command should take. Valid options: Number or string representation of a number. Default: 300.
+Sets the maximum time in seconds that the command should take. Valid options: Number or string representation of a number. Default: 300. A value of `0` for this property will result in using the default timeout of 300. Inifinite timeout is not supported in this module, but large timeouts are allowed if needed.
 
 ##### `tries`
 

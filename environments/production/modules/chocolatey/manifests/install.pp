@@ -8,22 +8,11 @@ class chocolatey::install {
     default   => 'windows'
   }
 
-  # These are specifically necessary to ensure that we know the path
-  # has been updated in the current run. They are typically a noop.
-  windows_env { 'chocolatey_ChocolateyInstall_env':
-    ensure    => present,
-    variable  => 'ChocolateyInstall',
-    mergemode => 'clobber',
-    value     => $::chocolatey::choco_install_location,
-    notify    => Exec['install_chocolatey_official'],
-  }
-
-  windows_env { 'chocolatey_PATH_env':
-    ensure    => present,
-    variable  => 'PATH',
-    mergemode => 'prepend',
-    value     => "${::chocolatey::choco_install_location}\\bin",
-    notify    => Exec['install_chocolatey_official'],
+  registry_value { 'ChocolateyInstall environment value':
+    ensure => present,
+    path   => 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\ChocolateyInstall',
+    type   => 'string',
+    data   => $chocolatey::choco_install_location,
   }
 
   exec { 'install_chocolatey_official':
@@ -32,6 +21,7 @@ class chocolatey::install {
     provider    => powershell,
     timeout     => $::chocolatey::choco_install_timeout_seconds,
     logoutput   => $::chocolatey::log_output,
-    environment => ["ChocolateyInstall=${::chocolatey::choco_install_location}"]
+    environment => ["ChocolateyInstall=${::chocolatey::choco_install_location}"],
+    require     => Registry_value['ChocolateyInstall environment value'],
   }
 }
