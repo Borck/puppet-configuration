@@ -2,12 +2,12 @@ GEM
   remote: http://rubygems.org/
   specs:
     diff-lcs (1.2.4)
-    facter (1.7.3)
+    facter (1.7.6)
     hiera-puppet-helper (1.0.1)
     metaclass (0.0.1)
     mocha (0.14.0)
       metaclass (~> 0.0.1)
-    puppet (2.7.23)
+    puppet (2.7.26)
       facter (~> 1.5)
     puppet-lint (0.3.2)
     puppetlabs_spec_helper (0.4.1.17)
