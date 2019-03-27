@@ -31,7 +31,8 @@ node default {
   if $::kernel == 'windows' {
 
     $username = split($identity['user'],'\\\\')[1]
-    $user_sid = $windows_sid
+    $user_sid = $user_sids[$username]
+    $hkcu = "HKU\\${user_sid}"
 
     $is_my_pc   = 'borck' in downcase($hostname)
     $is_at_pc   = $hostname =~ /^AT\d+$/
@@ -399,7 +400,7 @@ node default {
       registry_value { 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\PropertyBag\ThisPCPolicy': ensure => present, type => string, data => 'Hide' }
 
       #enable checkboxes, see: https://www.tenforums.com/attachments/tutorials/35188d1441136772-turn-off-select-items-using-check-boxes-windows-10-a-select_items_with_check_boxes.png
-      registry_value { "HKU\\${user_sid}\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\AutoCheckSelect": ensure => present, type => dword, data => 0x00000001 }
+      registry_value { "${hkcu}\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\AutoCheckSelect": ensure => present, type => dword, data => 0x00000001 }
 
       # add quick merge to context menu of reg-files
       registry_key   { 'HKCR\regfile\shell\quickmerge\command': ensure => present, }
@@ -455,7 +456,7 @@ node default {
 
       # Windows Explorer start to This PC
       registry_value {
-        "HKU\\${user_sid}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo":
+        "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo":
         ensure => present, type => dword, data => 0x00000001,  }
 
       # Add Recycling Bin to This PC
@@ -465,9 +466,9 @@ node default {
 
 
       # Hide Recycling Bin from desktop (GPO way)
-      registry_key   { "HKU\\${user_sid}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present, }
+      registry_key   { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present, }
       registry_value {
-        "HKU\\${user_sid}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
+        "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
         ensure => present, type => dword, data => 0x00000001,  }
     }
 
