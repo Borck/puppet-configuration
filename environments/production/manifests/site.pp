@@ -31,10 +31,14 @@ node default {
   if $::kernel == 'windows' {
 
     $username = split($identity['user'],'\\\\')[1]
-    $user_sid = $user_sids[$username]
+    $user_sid = $windows_sid
 
-    $is_my_pc = 'borck' in downcase($hostname)
+    $is_my_pc   = 'borck' in downcase($hostname)
+    $is_at_pc   = $hostname =~ /^AT\d+$/
+    $is_dev_pc  = $is_my_pc or $is_at_pc
     $is_my_user = 'borck' in downcase($username)
+
+
     ###########################################################################
     ########## Package repositories ###########################################
     ###########################################################################
@@ -48,22 +52,14 @@ node default {
     ###########################################################################
     ########## Office #########################################################
     ###########################################################################
+    if $is_my_user {
+      package { 'office365proplus ': ensure => present, }
+    }
 
     package { 'firefox': ensure => present, } #firefox have a very silent update mechanism
 
     package { 'EdgeDeflector ': ensure => latest, } #redirects URIs to the default browser (caution: menu popup)
 
-
-    # msoffice { 'office 2016':
-    #   version     => '2016',
-    #   edition     => 'Professional Plus',
-    #   sp          => '1',
-    #   lang_code   => 'de-DE',
-    #   license_key => 'XXX-XXX-XXX-XXX-XXX',
-    #   products    => ['Word','Excel', 'PowerPoint', 'Access', 'OneNote', 'Outlook', 'Publisher'],
-    #   deployment_root => '\\\\wdmycloudd\\Media\\Software\\Microsoft Office'
-    #   ensure      => present
-    # }
 
     class {'sevenzip': package_ensure => 'latest', package_name => ['7zip'], prerelease => false, }
 
@@ -78,7 +74,7 @@ node default {
     # rainmeter is unofficial and not a silent installer
     # package { 'rainmeter': ensure => latest, }
 
-    if $is_my_pc {
+    if $is_dev_pc {
       # package { 'cloudstation ': ensure => present, } # Synology Cloud Station Drive, synology drive used instead
 
       package { 'ghostscript': ensure => present, }
@@ -88,7 +84,7 @@ node default {
       package { 'yed': ensure => present, }
       # package { 'dropbox': ensure => present, } # not yet installed
     } else {
-      package { 'googlechrome': ensure => present, }
+      #package { 'googlechrome': ensure => present, }
       package { 'adobereader': ensure => present, }
     }
 
@@ -142,7 +138,7 @@ node default {
 
     package { 'jdk8': ensure => present, }
 
-    if $is_my_pc {
+    if $is_dev_pc {
 
       package { 'eclipse': ensure => present, install_options => ['--params', '"/Multi-User"'], }
 
@@ -235,7 +231,7 @@ node default {
     ########## visual studio + unity ##########################################
     ###########################################################################
 
-    if $is_my_pc {
+    if $is_dev_pc {
       package { 'visualstudio2017enterprise': ensure => present, }
 
       package { 'visualstudio2017-workload-azure': ensure => present, }
@@ -271,20 +267,17 @@ node default {
     ###########################################################################
 
     package { 'sdio': ensure => present, } # Snappy Driver Installer Origin (open source)
-    package { 'winaero-tweaker': ensure => present, }
 
 
-
-    # https://chocolatey.org/packages/desktopicons-winconfig
-    package { 'taskbar-winconfig':
-      ensure          => present,
-      install_options => ['--params', '"\'/LOCKED:yes', '/COMBINED:yes', '/PEOPLE:no', '/TASKVIEW:no', '/STORE:no', '/CORTANA:no\'"'],
+    if $is_my_pc {
+      package { 'winaero-tweaker': ensure => present, }
     }
+
 
     package { 'curl': ensure => present, }
     package { 'wget': ensure => present, }
 
-    if $is_my_pc {
+    if $is_dev_pc {
       package { 'putty': ensure => latest, }
       package { 'winscp': ensure => latest, }
       package { 'wireshark': ensure => latest, }
@@ -394,13 +387,8 @@ node default {
     ########## File explorer tweaks ###########################################
     ###########################################################################
 
-    # keyboard: remap capslock to shift
-    registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout\Scancode Map': ensure => present, type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
 
-    # Hide_Message_-_“Es_konnten_nicht_alle_Netzlaufwerke_wiederhergestellt_werden”
-    registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\NetworkProvider\RestoreConnection': ensure => present, type => dword, data => '0x00000000' }
-
-    if $is_my_pc {
+    if $is_dev_pc {
       # how to hide element in 'This PC': http://www.thewindowsclub.com/remove-the-folders-from-this-pc-windows-10
       # hide 'Documents' in 'This PC'
       registry_value { 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\PropertyBag\ThisPCPolicy': ensure => present, type => string, data => 'Hide' }
@@ -425,6 +413,14 @@ node default {
       registry_value { 'HKCR\DesktopBackground\Shell\Restart Explorer\\': ensure => present, type => string, data => 'Explorer neustarten' }
       registry_value { 'HKCR\DesktopBackground\Shell\Restart Explorer\icon': ensure => present, type => string, data => 'explorer.exe' }
       registry_value { 'HKCR\DesktopBackground\Shell\Restart Explorer\command\\': ensure => present, type => string, data => 'TSKILL EXPLORER' }
+    }
+
+    if $is_my_user {
+      # keyboard: remap capslock to shift
+      registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout\Scancode Map': ensure => present, type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
+
+      # Hide_Message_-_“Es_konnten_nicht_alle_Netzlaufwerke_wiederhergestellt_werden”
+      registry_value { 'HKLM\SYSTEM\CurrentControlSet\Control\NetworkProvider\RestoreConnection': ensure => present, type => dword, data => '0x00000000' }
 
       # remove 'Add to library' from context menu
       registry_key   { 'HKCR\Folder\ShellEx\ContextMenuHandlers\Library Location': ensure => absent, }
@@ -446,22 +442,42 @@ node default {
       # registry_value { 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\link': ensure => present, type => binary, data => '00 00 00 00' }
       # backup: data => '1e 00 00 00'
 
+      # remove folders from This PC
+      # https://chocolatey.org/packages/desktopicons-winconfig
+      package { 'taskbar-winconfig':
+        ensure          => present,
+        install_options => ['--params', '"\'/LOCKED:yes', '/COMBINED:yes', '/PEOPLE:no', '/TASKVIEW:no', '/STORE:no', '/CORTANA:no\'"'],
+      }
       # Remove '3D objects' from This PC
       registry_value { 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}': ensure => absent  }
       registry_value { 'HKLM\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\MyComputer\NameSpace\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}': ensure => absent  }
-    }
 
-    if $is_my_user {
-      # Windows Explorer launch to ThisPC
-      registry_value { "HKU\\${user_sid}\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\LaunchTo": ensure => present, type => dword, data => 0x00000001,  }
-    }
 
+      # Windows Explorer start to This PC
+      registry_value {
+        "HKU\\${user_sid}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo":
+        ensure => present, type => dword, data => 0x00000001,  }
+
+      # Add Recycling Bin to This PC
+      registry_key   {
+        "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace\\{645FF040-5081-101B-9F08-00AA002F954E}":
+        ensure => present, }
+
+
+      # Hide Recycling Bin from desktop (GPO way)
+      registry_key   { "HKU\\${user_sid}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present, }
+      registry_value {
+        "HKU\\${user_sid}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
+        ensure => present, type => dword, data => 0x00000001,  }
+    }
 
 
     ###########################################################################
     ########## Gaming #########################################################
     ###########################################################################
-    #package { 'origin': ensure => latest, }
-    package { 'steam': ensure => present, }
+    if $is_my_pc {
+      #package { 'origin': ensure => latest, }
+      package { 'steam': ensure => present, }
+    }
   }
 }
