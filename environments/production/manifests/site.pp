@@ -14,16 +14,10 @@ define reg_ensure_file_ext_value(String $value) {
 
 define reg_ensure_archive_ext(String $icondirectory) {
   reg_ensure_file_ext { $name: display_name => "${name} Archive", icon => "${icondirectory}\\${name}.ico" }
-  #registry_key   { "HKCR\\${name}file": ensure => present, }
-  #registry_value { "HKCR\\${name}file\\": type => string, data => "${name} Archive" }
-  #registry_key   { "HKCR\\${name}file\\defaulticon": ensure => present, }
-  #registry_value { "HKCR\\${name}file\\defaulticon\\": type => string, data => "${icondirectory}\\${name}.ico" }
   registry_key   { "HKCR\\${name}file\\shell\\open\\command": ensure => present, }
   registry_value { "HKCR\\${name}file\\shell\\": type => string, data => 'open' }
   registry_value { "HKCR\\${name}file\\shell\\open\\command\\": type => string, data => '"C:\\Program Files\\7-Zip\\7zFM.exe" "%1"' }
   registry_value { "HKCR\\${name}file\\shell\\open\\Icon": type => string, data => '"C:\\Program Files\\7-Zip\\7zFM.exe"' }
-  #registry_key   { "HKCR\\.${name}": ensure => present, }
-  #registry_value { "HKCR\\.${name}\\": type => string, data => "${name}file" }
   registry_value { "HKCR\\.${name}\\PerceivedType": type => string, data => 'compressed' }
 }
 
@@ -48,6 +42,7 @@ node default {
     # set chocolatey as default package provider
     include chocolatey
     Package { provider => chocolatey, }
+
 
 
     ###########################################################################
@@ -127,15 +122,19 @@ node default {
     package { 'audacity': ensure => present, }
     package { 'audacity-lame': ensure => present, }
 
-    package { 'Calibre ': ensure => present, } # convert * to  ebook
-
+    package { 'Calibre ': ensure => present, } # convert * to ebook
+    
     if $is_my_pc {
       #package { 'itunes': ensure => latest, }  #used MS Store version
       package { 'mp3tag': ensure => present, }
 
       # package { 'vcredist2008': ensure => present, } # install issue
       package { 'picard': ensure => present, } # MusicBrainz Picard, music tags online grabber, requires 'vcredist2008'
+
+      package { 'mkvtoolnix': ensure => present, }
     }
+
+
 
     ###########################################################################
     ########## Development ####################################################
@@ -183,6 +182,8 @@ node default {
 
       # package { 'python3': ensure => '3.6.0', install_options => ['--params', '/InstallDir', '"c:\\program', 'files\\Python\\Python36"']}
     }
+
+
 
     ###########################################################################
     ########## Visual Studio Code + NotepadReplacer ###########################
@@ -262,6 +263,8 @@ node default {
 
       package { 'arduino': ensure => present, }
     }
+
+
 
     ###########################################################################
     ########## Administration #################################################
@@ -386,6 +389,7 @@ node default {
     reg_ensure_file_ext_value { 'svg\\PerceivedType' : value => 'image' }
 
 
+
     ###########################################################################
     ########## File explorer tweaks ###########################################
     ###########################################################################
@@ -451,6 +455,7 @@ node default {
       # Windows Explorer launch to ThisPC
       registry_value { "HKU\\${user_sid}\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\LaunchTo": ensure => present, type => dword, data => 0x00000001,  }
     }
+
 
 
     ###########################################################################
