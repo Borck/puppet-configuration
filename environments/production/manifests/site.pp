@@ -31,13 +31,12 @@ node default {
   if $::kernel == 'windows' {
 
     $username = split($identity['user'],'\\\\')[1]
-    $user_sid = $user_sids[$username]
-    $hkcu = "HKU\\${user_sid}"
+    $hkcu = "HKU\\${identity2['sid']}"
 
     $is_my_pc   = 'borck' in downcase($hostname)
     $is_at_pc   = $hostname =~ /^AT\d+$/
     $is_dev_pc  = $is_my_pc or $is_at_pc
-    $is_my_user = 'borck' in downcase($username)
+    $is_my_user = '\\borck' in downcase($username)
 
 
     ###########################################################################
