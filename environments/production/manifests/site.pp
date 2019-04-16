@@ -30,13 +30,14 @@ node default {
 
   if $::kernel == 'windows' {
 
-    $username = split($identity['user'],'\\\\')[1]
+    $username = $identity['user']
     $hkcu = "HKU\\${identity2['sid']}"
 
     $is_my_pc   = 'borck' in downcase($hostname)
     $is_at_pc   = $hostname =~ /^AT\d+$/
     $is_dev_pc  = $is_my_pc or $is_at_pc
     $is_my_user = '\\borck' in downcase($username)
+
 
 
     ###########################################################################
@@ -215,7 +216,6 @@ node default {
     file { 'C:\ProgramData\NotepadReplacer\notepad.exe':
       ensure => 'link',
       target => 'C:\\Program Files\\Microsoft VS Code\\code.exe',
-      #target => "C:\\Users\\${username}\\AppData\\Local\\Programs\\Microsoft VS Code\\code.exe",
     }
 
     package { 'notepadreplacer':
@@ -253,11 +253,13 @@ node default {
       package { 'dottrace': ensure => present, } # performance profiler
       package { 'dotmemory': ensure => present, } # memory profiler
 
-      # package { 'unity': ensure => present, } not really required
-      # Game development with Unity workload for Visual Studio 2017
-      # package { 'visualstudio2017-workload-managedgame': ensure => present, }
-
       package { 'arduino': ensure => present, }
+
+      if !$is_my_pc {
+        package { 'unity': ensure => present, }
+        # Game development with Unity workload for Visual Studio 2017
+        package { 'visualstudio2017-workload-managedgame': ensure => present, }
+      }
     }
 
 
