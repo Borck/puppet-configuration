@@ -54,12 +54,12 @@ node default {
     ########## Office #########################################################
     ###########################################################################
     if $is_my_user {
-      package { 'office365proplus ': ensure => present }
+      package { 'office365proplus': ensure => present }
     }
 
     package { 'firefox': ensure => present } #firefox have a very silent update mechanism
 
-    package { 'EdgeDeflector ': ensure => latest } #redirects URIs to the default browser (caution: menu popup)
+    package { 'EdgeDeflector': ensure => latest } #redirects URIs to the default browser (caution: menu popup)
 
 
     class {'sevenzip': package_ensure => 'latest', package_name => ['7zip'], prerelease => false }
@@ -76,7 +76,7 @@ node default {
     # package { 'rainmeter': ensure => latest }
 
     if $is_dev_pc {
-      # package { 'cloudstation ': ensure => present } # Synology Cloud Station Drive, synology drive used instead
+      # package { 'cloudstation': ensure => present } # Synology Cloud Station Drive, synology drive used instead
 
       package { 'ghostscript': ensure => present }
       package { 'miktex': ensure => present }
@@ -114,13 +114,13 @@ node default {
       ensure => absent,
     }
 
-    package { 'handbrake': ensure => present }
+    package { 'handbrake': ensure => '1.2.2' }
     package { 'FileOptimizer': ensure => present }
 
     package { 'audacity': ensure => present }
     package { 'audacity-lame': ensure => present }
 
-    package { 'Calibre ': ensure => present } # convert * to ebook
+    package { 'Calibre': ensure => present } # convert * to ebook
 
     if $is_my_pc {
       #package { 'itunes': ensure => latest }  #used MS Store version
@@ -245,7 +245,7 @@ node default {
       package { 'visualstudio2017-workload-vctools': ensure => present }
       package { 'visualstudio2017-workload-visualstudioextension': ensure => present }
 
-      package { 'visualsvn': ensure => present }
+      #package { 'visualsvn': ensure => present } #to old, not working with VS2017
 
       # jetbrains
       package { 'resharper': ensure => present }
