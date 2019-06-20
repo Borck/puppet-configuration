@@ -68,6 +68,7 @@ node default {
     package { 'jcpicker': ensure => present } # screenshot to text
     package { 'screentogif': ensure => present }
     package { 'AutoHotKey': ensure => present }
+    package { 'runasdate': ensure => latest }
 
     package { 'bulkrenameutility': ensure => present }
     package { 'dupeguru': ensure => present }
