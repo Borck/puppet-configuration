@@ -68,6 +68,7 @@ node default {
     #package { 'jcpicker': ensure => latest } # installer not working (from 20190605)
     package { 'screentogif': ensure => latest }
     package { 'AutoHotKey': ensure => latest }
+    package { 'runasdate': ensure => latest }
 
     package { 'bulkrenameutility': ensure => latest }
     package { 'dupeguru': ensure => latest }
