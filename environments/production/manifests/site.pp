@@ -64,13 +64,13 @@ node default {
 
     class {'sevenzip': package_ensure => 'latest', package_name => ['7zip'], prerelease => false }
 
-    package { 'capture2text': ensure => present } # screenshot to text
-    package { 'jcpicker': ensure => present } # screenshot to text
-    package { 'screentogif': ensure => present }
-    package { 'AutoHotKey': ensure => present }
+    package { 'capture2text': ensure => latest } # screenshot to text
+    #package { 'jcpicker': ensure => latest } # installer not working (from 20190605)
+    package { 'screentogif': ensure => latest }
+    package { 'AutoHotKey': ensure => latest }
 
-    package { 'bulkrenameutility': ensure => present }
-    package { 'dupeguru': ensure => present }
+    package { 'bulkrenameutility': ensure => latest }
+    package { 'dupeguru': ensure => latest }
 
     # rainmeter is unofficial and not a silent installer
     # package { 'rainmeter': ensure => latest }
@@ -82,7 +82,7 @@ node default {
       package { 'miktex': ensure => present }
       package { 'texstudio': ensure => present }
       package { 'jabref': ensure => present }
-      package { 'yed': ensure => present }
+      package { 'yed': ensure => latest }
       # package { 'dropbox': ensure => present } # not yet installed
     } else {
       #package { 'googlechrome': ensure => present }
@@ -103,7 +103,7 @@ node default {
 
     # disabled because 'present' and 'latest' causes errors and downloading setup exe each time, which takes around 70 s
     # package { 'inkscape': ensure => present }
-    package { 'sketchup': ensure => present }
+    package { 'sketchup': ensure => latest }  # sketchup 2017, last free version
 
     package { 'caesium.install': ensure => present }
     file { 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Caesium\\Caesium - Image Converter.exe':
@@ -114,22 +114,22 @@ node default {
       ensure => absent,
     }
 
-    package { 'handbrake': ensure => '1.2.2' }
-    package { 'FileOptimizer': ensure => present }
+    package { 'handbrake': ensure => latest }
+    package { 'FileOptimizer': ensure => latest }
 
-    package { 'audacity': ensure => present }
-    package { 'audacity-lame': ensure => present }
+    package { 'audacity': ensure => latest }
+    package { 'audacity-lame': ensure => latest }
 
-    package { 'Calibre': ensure => present } # convert * to ebook
+    package { 'Calibre': ensure => latest } # convert * to ebook
 
     if $is_my_pc {
       #package { 'itunes': ensure => latest }  #used MS Store version
-      package { 'mp3tag': ensure => present }
+      package { 'mp3tag': ensure => latest }
 
       # package { 'vcredist2008': ensure => present } # install issue
-      package { 'picard': ensure => present } # MusicBrainz Picard, music tags online grabber, requires 'vcredist2008'
+      package { 'picard': ensure => latest } # MusicBrainz Picard, music tags online grabber, requires 'vcredist2008'
 
-      package { 'mkvtoolnix': ensure => present }
+      #package { 'mkvtoolnix': ensure => latest } #not in use
     }
 
 
@@ -142,7 +142,7 @@ node default {
 
     if $is_dev_pc {
 
-      package { 'eclipse': ensure => present, install_options => ['--params', '"/Multi-User"'] }
+      package { 'eclipse': ensure => '4.10', install_options => ['--params', '"/Multi-User"'] }
 
       package { 'make': ensure => present }
       #package { 'cmake': ensure => latest, install_options => ["--installargs", "'DESKTOP_SHORTCUT_REQUESTED=0'", 
@@ -154,7 +154,7 @@ node default {
 
       package { 'sandboxie': ensure => latest }
 
-      package { 'hxd': ensure => present }
+      package { 'hxd': ensure => latest }
 
       # inspecting PE formatted binaries such aswindows EXEs and DLLs. 
       # package { 'pestudio': ensure => present } # 404
@@ -172,9 +172,10 @@ node default {
       registry_value { 'HKCR\\Directory\\Background\\shell\\git_shell\\LegacyDisable': ensure => present, type => string }
 
       # installing tortoisegit can fail if non-package-version is installed
+      # 'tortoisegit': ensure => latest is causing errors
       package { 'tortoisegit': ensure => present }
 
-      package { 'tortoisesvn': ensure => present }
+      package { 'tortoisesvn': ensure => latest }
 
       package { 'sourcetree': ensure => present }
 
@@ -188,6 +189,7 @@ node default {
     ###########################################################################
     # code for Visual Studio (not Visual Studio Code is at the and of this script)
 
+    # 'visualstudiocode': ensure => latest is causing errors
     package { 'visualstudiocode': ensure => present, install_options => ['--params', "'/NoDesktopIcon", "/NoQuicklaunchIcon'"],}
 
     #https://forge.puppet.com/tragiccode/vscode
@@ -269,11 +271,11 @@ node default {
     ########## Administration #################################################
     ###########################################################################
 
-    package { 'sdio': ensure => present } # Snappy Driver Installer Origin (open source)
+    package { 'sdio': ensure => latest } # Snappy Driver Installer Origin (open source)
 
 
     if $is_my_pc {
-      package { 'winaero-tweaker': ensure => present }
+      package { 'winaero-tweaker': ensure => latest }
     }
 
 
@@ -287,12 +289,12 @@ node default {
       package { 'CloseTheDoor': ensure => present } # close tcp/udp ports
 
 
-      package { 'windirstat': ensure => present }
+      package { 'windirstat': ensure => latest }
       package { 'junction-link-magic': ensure => present }
 
       #package { 'win32diskimager': ensure => present }
-      package { 'etcher': ensure => present } # image to usb drive or sd card
-      package { 'rufus': ensure => present } # format/create bootable USB flash drives
+      package { 'etcher': ensure => latest } # image to usb drive or sd card
+      package { 'rufus': ensure => latest } # format/create bootable USB flash drives
 
       # package { 'driverbooster': ensure => latest } # checksum error
       package { 'bluescreenview': ensure => present }
