@@ -301,60 +301,50 @@ node default {
       package { 'Sysinternals': ensure => present }
       package { 'windows-repair-toolbox': ensure => present }
       package { 'WindowsRepair': ensure => present }
+    }
 
-      #add 'command prompt' to context menu of folders
-      registry_key   { 'HKCR\\Directory\\ContextMenus\\MenuCmd\\shell\\open\\command': ensure => present }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuCmd\\shell\\open\\MUIVerb': type => string, data => 'Command Prompt' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuCmd\\shell\\open\\Icon': type => string, data => 'cmd.exe' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuCmd\\shell\\open\\command\\': type => string, data => 'cmd.exe /s /k pushd "%V"' }
+    ###########################################################################
+    ########## Terminal tweaks ################################################
+    ###########################################################################
 
-      registry_key   { 'HKCR\\Directory\\ContextMenus\\MenuCmd\\shell\\runas\\command': ensure => present }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuCmd\\shell\\runas\\MUIVerb': type => string, data => 'Command Prompt Elevated' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuCmd\\shell\\runas\\Icon': type => string, data => 'cmd.exe' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuCmd\\shell\\runas\\HasLUAShield': type => string, data => '' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuCmd\\shell\\runas\\command\\': type => string, data => 'cmd.exe /s /k pushd "%V"' }
-
-      registry_key   { 'HKCR\\Directory\\shell\\01MenuCmd': ensure => present }
-      registry_value { 'HKCR\\Directory\\shell\\01MenuCmd\\MUIVerb': type => string, data => 'Command Prompts' }
-      registry_value { 'HKCR\\Directory\\shell\\01MenuCmd\\Icon': type => string, data => 'cmd.exe' }
-      registry_value { 'HKCR\\Directory\\shell\\01MenuCmd\\ExtendedSubCommandsKey': type => string, data => 'Directory\\ContextMenus\\MenuCmd' }
-
-      registry_key   { 'HKCR\\Directory\\Background\\shell\\01MenuCmd': ensure => present }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\01MenuCmd\\MUIVerb': type => string, data => 'Command Prompts' }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\01MenuCmd\\Icon': type => string, data => 'cmd.exe' }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\01MenuCmd\\ExtendedSubCommandsKey': type => string, data => 'Directory\\ContextMenus\\MenuCmd' }
-
-      #add 'powershell' to context menu of folders
-      registry_key   { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell\\shell\\open\\command': ensure => present }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell\\shell\\open\\MUIVerb': type => string, data => 'Powershell' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell\\shell\\open\\Icon': type => string, data => 'powershell.exe' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell\\shell\\open\\command\\': type => string, data => 'powershell.exe -noexit -command Set-Location "%V"' }
-
-      registry_key   { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell\\shell\\runas\\command': ensure => present }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell\\shell\\runas\\MUIVerb': type => string, data => 'Powershell Elevated' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell\\shell\\runas\\Icon': type => string, data => 'powershell.exe' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell\\shell\\runas\\HasLUAShield': type => string, data => '' }
-      registry_value { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell\\shell\\runas\\command\\': type => string, data => 'powershell.exe -noexit -command Set-Location "%V"' }
-
-      registry_key   { 'HKCR\\Directory\\shell\\02MenuPowerShell': ensure => present }
-      registry_value { 'HKCR\\Directory\\shell\\02MenuPowerShell\\MUIVerb': type => string, data => 'PowerShell' }
-      registry_value { 'HKCR\\Directory\\shell\\02MenuPowerShell\\Icon': type => string, data => 'powershell.exe' }
-      registry_value { 'HKCR\\Directory\\shell\\02MenuPowerShell\\ExtendedSubCommandsKey': type => string, data => 'Directory\\ContextMenus\\MenuPowerShell' }
-
-      registry_key   { 'HKCR\\Directory\\Background\\shell\\02MenuPowerShell': ensure => present }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\02MenuPowerShell\\MUIVerb': type => string, data => 'PowerShell' }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\02MenuPowerShell\\Icon': type => string, data => 'powershell.exe' }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\02MenuPowerShell\\ExtendedSubCommandsKey': type => string, data => 'Directory\\ContextMenus\\MenuPowerShell' }
+    if $is_dev_pc {
+      #add 'command prompt' and powershell to context menu of folders and drives
+      #remove obsolete entries
+      registry_key   { 'HKCR\\Directory\\ContextMenus\\MenuCmd': ensure => absent }
+      registry_key   { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell': ensure => absent }
+      registry_key   { 'HKCR\\Directory\\Background\\shell\\01MenuCmd': ensure => absent }
+      registry_key   { 'HKCR\\Directory\\Background\\shell\\02MenuPowerShell': ensure => absent }
+      registry_key   { 'HKCR\\Directory\\shell\\01MenuCmd': ensure => absent }
+      registry_key   { 'HKCR\\Directory\\shell\\02MenuPowerShell': ensure => absent }
 
 
-      registry_key   { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command': ensure => present }
+      $reg_dir_terminals_icon = 'imageres.dll,-5323'
+      $reg_dir_terminals = 'Windows.MultiVerb.cmd;Windows.MultiVerb.cmdPromptAsAdministrator;|;Windows.MultiVerb.Powershell;Windows.MultiVerb.PowershellAsAdmin'
+
+      registry_key   { 'HKCR\\Directory\\Background\\shell\\Terminals':              ensure => present }
+      registry_value { 'HKCR\\Directory\\Background\\shell\\Terminals\\Icon':        type => string, data =>  $reg_dir_terminals_icon }
+      registry_value { 'HKCR\\Directory\\Background\\shell\\Terminals\\SubCommands': type => string, data => $reg_dir_terminals }
+      registry_key   { 'HKCR\\Directory\\shell\\Terminals':                          ensure => present }
+      registry_value { 'HKCR\\Directory\\shell\\Terminals\\Icon':                    type => string, data =>  $reg_dir_terminals_icon }
+      registry_value { 'HKCR\\Directory\\shell\\Terminals\\SubCommands':             type => string, data => $reg_dir_terminals }
+ 
+      registry_key   { 'HKCR\\Drive\\Background\\shell\\Terminals':              ensure => present }
+      registry_value { 'HKCR\\Drive\\Background\\shell\\Terminals\\Icon':        type => string, data =>  $reg_dir_terminals_icon }
+      registry_value { 'HKCR\\Drive\\Background\\shell\\Terminals\\SubCommands': type => string, data => $reg_dir_terminals }
+      registry_key   { 'HKCR\\Drive\\shell\\Terminals':                          ensure => present }
+      registry_value { 'HKCR\\Drive\\shell\\Terminals\\Icon':                    type => string, data =>  $reg_dir_terminals_icon }
+      registry_value { 'HKCR\\Drive\\shell\\Terminals\\SubCommands':             type => string, data => $reg_dir_terminals }
+
+
+
+      # for powershell scripts (*.ps1): add 'Run as administrator' to context menu
+      registry_key   { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command':      ensure => present }
       registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\HasLUAShield': ensure => present, data => '' }
-      registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command\\':
-        ensure => present,
+      registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\MUIVerb':      ensure => present, data => '@shell32.dll,-37448' }
+      registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command\\':    ensure => present,
         data   => 'powershell.exe "-Command" "if((Get-ExecutionPolicy ) -ne \'AllSigned\') { Set-ExecutionPolicy -Scope Process Bypass }; & \'%1\'"'
       }
     }
-
 
     ###########################################################################
     ########## File types #####################################################
@@ -395,11 +385,19 @@ node default {
 
 
     ###########################################################################
-    ########## File explorer tweaks ###########################################
+    ########## This PC tweaks #################################################
     ###########################################################################
 
+    $regkey_hklm_sw_x86 = 'HKLM\\SOFTWARE'
+    $regkey_hklm_sw_x64 = 'HKLM\\SOFTWARE\\Wow6432Node'
+    $regsubkey_mycomputer_ns = '\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace'
 
-    if $is_dev_pc {
+    if $is_my_user {
+      # Windows Explorer start to This PC
+      registry_value {
+        "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo":
+        type => dword, data => 0x00000001 }
+
       # how to hide element in 'This PC': http://www.thewindowsclub.com/remove-the-folders-from-this-pc-windows-10
       $regkeyFolderDesc = 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FolderDescriptions'
       # hide 'Documents' in 'This PC'
@@ -411,6 +409,53 @@ node default {
       # hide 'Videos' in 'This PC'
       registry_value { "${regkeyFolderDesc}\\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\\PropertyBag\\ThisPCPolicy":
         ensure => present, type => string, data => 'Hide' }
+
+      # remove '3D objects'
+      registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}": ensure => absent }
+      registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}": ensure => absent }
+
+    }
+
+    # ensure 'Recycling Bin'
+    registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{645FF040-5081-101B-9F08-00AA002F954E}": ensure => present }
+    registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{645FF040-5081-101B-9F08-00AA002F954E}": ensure => present }
+
+    # ensure 'Desktop'
+    registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}": ensure => present }
+    registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}": ensure => present }
+
+    # ensure 'Downloads'
+    registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{374DE290-123F-4565-9164-39C4925E467B}": ensure => present }
+    registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{374DE290-123F-4565-9164-39C4925E467B}": ensure => present }
+
+    # ensure 'Music'
+    registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}": ensure => present }
+    registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}": ensure => present }
+
+
+################################################################################
+#                                # RELOCATE SHELL/LIBRARY FOLDERS #	       #
+################################################################################
+#RELOCATE SHELL FOLDERS TO NEW DRIVE PARTITION: COOKIES | SENDTO | DOCS | FAVS | PICS | MUSIC | VIDEO | TIF | DOWNLOAD | TEMPLATES
+#http://www.tweakhound.com/2013/10/22/tweaking-windows-8-1/5/
+#[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders]
+#"SendTo"="X:\\OFF_SYSTEMDRIVE\\XtremeSend2\\SendTo"
+#"Personal"="X:\\OFF_SYSTEMDRIVE\\DOCS"
+#"Favorites"="X:\\OFF_SYSTEMDRIVE\\Favs"
+#"My Pictures"="X:\\OFF_SYSTEMDRIVE\\Pics"
+#"My Music"="X:\\OFF_SYSTEMDRIVE\\Music"
+#COPY AND PASTE HEX VALUIE FOR DOWNLOAD SHELL FOLDER {374DE290-123F-4565-9164-39C4925E467B}
+#"{374DE290-123F-4565-9164-39C4925E467B}"=hex(2):46,00,3a,00,5c,00,57,00,50,00,\
+#  49,00,5c,00,49,00,6e,00,73,00,74,00,61,00,6c,00,6c,00,5c,00,31,00,44,00,6f,\
+#  00,77,00,6e,00,6c,00,6f,00,61,00,64,00,73,00,00,00
+#"Templates"=hex(2):46,00,3a,00,5c,00,31,00,48,00,4f,00,4d,00,45,00,5c,00,44,00,\
+#  4f,00,43,00,53,00,5c,00,54,00,65,00,6d,00,70,00,6c,00,61,00,74,00,65,00,00,\
+#00
+    ###########################################################################
+    ########## File explorer tweaks ###########################################
+    ###########################################################################
+
+    if $is_dev_pc {
 
       #enable checkboxes
       registry_value { "${hkcu}\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\AutoCheckSelect":
@@ -465,33 +510,33 @@ node default {
         ensure          => present,
         install_options => ['--params', '"\'/LOCKED:yes', '/COMBINED:yes', '/PEOPLE:no', '/TASKVIEW:no', '/STORE:no', '/CORTANA:no\'"'],
       }
-      # Remove '3D objects' from This PC
-      registry_value {
-        'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}':
-        ensure => absent }
-      registry_value {
-        'HKLM\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}':
-        ensure => absent }
 
+      
 
-      # Windows Explorer start to This PC
-      registry_value {
-        "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo":
-        ensure => present, type => dword, data => 0x00000001 }
-
-      # Add Recycling Bin to This PC
-      registry_key   {
-        "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace\\{645FF040-5081-101B-9F08-00AA002F954E}":
-        ensure => present }
-
-
-      # Hide Recycling Bin from desktop (GPO way)
+            # Hide Recycling Bin from desktop (GPO way)
       registry_key   { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present }
       registry_value {
         "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
-        ensure => present, type => dword, data => 0x00000001 }
+        type => dword, data => 0x00000001 }
     }
 
+    
+
+    ###############################################################################
+                                    # REGISTER / UNREGISTER  DLL & OCX FILE #	   #
+    ###############################################################################
+    #http://www.eightforums.com/tutorials/40512-register-unregister-context-menu-dll-ocx-files.html
+    if $is_dev_pc {
+      registry_key   { 'HKEY_CLASSES_ROOT\\dllfile\\shell\\Register\\command': ensure => present }
+      registry_value   { 'HKEY_CLASSES_ROOT\\dllfile\\shell\\Register\\command': type => string, data => 'regsvr32.exe "%L"' }
+      registry_key   { 'HKEY_CLASSES_ROOT\\dllfile\\shell\\Unregister\\command': ensure => present }
+      registry_value   { 'HKEY_CLASSES_ROOT\\dllfile\\shell\\Unregister\\command': type => string, data => 'regsvr32.exe /u %L' }
+
+      registry_key   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Register\\command': ensure => present }
+      registry_value   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Register\\command': type => string, data => 'regsvr32.exe "%L"' }
+      registry_key   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Unregister\\command': ensure => present }
+      registry_value   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Unregister\\command': type => string, data => 'regsvr32.exe /u %L' }
+    }
 
     ###########################################################################
     ########## Gaming #########################################################
