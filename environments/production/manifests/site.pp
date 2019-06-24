@@ -493,6 +493,8 @@ node default {
       # remove 'Scan with Windows Defender' from context menu
       registry_key   { 'HKCR\\*\\shellex\\ContextMenuHandlers\\EPP': ensure => absent }
       registry_key   { 'HKCR\\Directory\\shellex\\ContextMenuHandlers\\EPP': ensure => absent }
+      registry_key   { 'HKCR\\Drive\\shellex\\ContextMenuHandlers\\EPP': ensure => absent }
+
       # backup:
       # registry_value { 'HKCR\\*\\ShellEx\\ContextMenuHandlers\\EPP\\': ensure => present, type => string, data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}' }
       # registry_value { 'HKCR\\Directory\\ShellEx\\ContextMenuHandlers\\EPP\\': ensure => present, type => string, data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}' }
