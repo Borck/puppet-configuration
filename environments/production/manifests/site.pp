@@ -73,6 +73,9 @@ node default {
     package { 'bulkrenameutility': ensure => latest }
     package { 'dupeguru': ensure => latest }
 
+    package { 'lockhunter': ensure => latest }
+
+
     # rainmeter is unofficial and not a silent installer
     # package { 'rainmeter': ensure => latest }
 
