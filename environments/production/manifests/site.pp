@@ -29,7 +29,7 @@ node default {
   #include stdlib
 
   if $::kernel == 'windows' {
-
+ 
     $username = $identity['user']
     $hkcu = "HKU\\${identity2['sid']}"
 
@@ -71,6 +71,11 @@ node default {
     package { 'runasdate': ensure => latest }
 
     package { 'bulkrenameutility': ensure => latest }
+    registry_key {"HKEY_CLASSES_ROOT\\*\\shellex\\ContextMenuHandlers\\BRUMenuHandler": ensure => absent}
+    registry_key {"HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler": ensure => absent}
+    registry_key {"HKEY_CLASSES_ROOT\\Drive\\shellex\\ContextMenuHandlers\\BRUMenuHandler": ensure => absent}
+    #registry_value {"HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler\\": type => string, data => '{5D924130-4CB1-11DB-B0DE-0800200C9A66}'}
+
     package { 'dupeguru': ensure => latest }
 
     # rainmeter is unofficial and not a silent installer
@@ -93,14 +98,14 @@ node default {
 
 
     ###########################################################################
-    ########## Media tools ####################################################
+    ########## Media tools/tweaks #############################################
     ###########################################################################
 
     package { 'vlc': ensure => latest }
-    registry_key { 'HKCR\\Directory\\shell\\AddToPlaylistVLC': ensure => present }
-    registry_value { 'HKCR\\Directory\\shell\\AddToPlaylistVLC\\LegacyDisable': ensure => present, type => string }
-    registry_key { 'HKCR\\Directory\\shell\\PlayWithVLC': ensure => present }
-    registry_value { 'HKCR\\Directory\\shell\\PlayWithVLC\\LegacyDisable': ensure => present, type => string }
+    if $is_my_user {
+      registry_value { 'HKCR\\Directory\\shell\\AddToPlaylistVLC\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\Directory\\shell\\PlayWithVLC\\LegacyDisable': ensure => present, type => string, data => '' }
+    }
 
     # disabled because 'present' and 'latest' causes errors and downloading setup exe each time, which takes around 70 s
     # package { 'inkscape': ensure => present }
@@ -132,6 +137,55 @@ node default {
 
       #package { 'mkvtoolnix': ensure => latest } #not in use
     }
+
+    if $is_my_user {
+      #nuke Windows Media Player
+      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\audio\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\audio\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      #registry_value { 'HKCR\\SystemFileAssociations\\video\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      #registry_value { 'HKCR\\SystemFileAssociations\\video\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_key { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo': ensure => absent }
+      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo\\': ensure => absent, type => string, data => '{7AD84985-87B4-4a16-BE58-8B72A5B390F7}' }
+    }
+
+
+    ###########################################################################
+    ########## Text tweaks ####################################################
+    ###########################################################################
+
+    $default_text_editor = 'C:\\Program Files\\Microsoft VS Code\\code.exe'
+    #$default_text_editor = '%SystemRoot%\system32\NOTEPAD.EXE'
+
+    # change *.txt file association
+    registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\Hash": type => string, data => 'hK1YV2FCtgs='}
+    registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\ProgId": type => string, data => 'Applications\\code.exe'}
+
+    $notepad_replace_helperdir = 'C:\\ProgramData\\NotepadReplacer'
+    $notepad_replace_helperlink = "${notepad_replace_helperdir}\\notepad.exe"
+    # preferred symlink syntax
+    file { $notepad_replace_helperdir: ensure => 'directory', }
+    file { $notepad_replace_helperlink: ensure => 'link', target => $default_text_editor }
+
+    package { 'notepadreplacer':
+      ensure          => installed,
+      provider        => chocolatey,
+      install_options => ['-installarguments', '"/notepad=C:\ProgramData\NotepadReplacer\notepad.exe', '/verysilent"'],
+    }
+
+    registry_value {'HKCR\\SystemFileAssociations\\text\\shell\\open\\icon': type => string, data => $notepad_replace_helperlink}
+    registry_value {'HKCR\\SystemFileAssociations\\text\\shell\\edit\\LegacyDisable': type => string, data => ''}
+
+    #comment code, because of changed 'Open With' setting above for *.txt files
+    #registry_value {'HKCR\\txtfile\\shell\\open\\icon': type => string, data => $notepad_replace_helperlink}
+    #registry_value {'HKCR\\txtfile\\shell\\print\\LegacyDisable': type => string, data => ''}
+    #registry_value {'HKCR\\txtfile\\shell\\printto\\LegacyDisable': type => string, data => ''}
+
 
 
 
@@ -186,12 +240,17 @@ node default {
 
 
     ###########################################################################
-    ########## Visual Studio Code + NotepadReplacer ###########################
+    ########## Visual Studio Code #############################################
     ###########################################################################
     # code for Visual Studio (not Visual Studio Code is at the and of this script)
 
     # 'visualstudiocode': ensure => latest is causing errors
-    package { 'visualstudiocode': ensure => present, install_options => ['--params', "'/NoDesktopIcon", "/NoQuicklaunchIcon'"],}
+    package { 'vscode':
+      ensure          => present,
+      install_options => ['--params', '\'/NoDesktopIcon', '/NoQuicklaunchIcon', '/NoContextMenuFiles', '/NoContextMenuFolders\''],
+    }
+    registry_value { 'HKCR\\Applications\\Code.exe\\shell\\open\\icon': ensure => present, type => string, data => '"C:\\Program Files\\Microsoft VS Code\\Code.exe"' }
+
 
     #https://forge.puppet.com/tragiccode/vscode
     # class { 'vscode':
@@ -212,22 +271,6 @@ node default {
     # vscode_extension { 'Gimly81.matlab': ensure  => 'present', require => Class['vscode'] }
     # vscode_extension { 'Lua': ensure  => 'present', require => Class['vscode'] }
 
-    # preferred symlink syntax
-    file { 'C:\\ProgramData\\NotepadReplacer':
-      ensure => 'directory',
-    }
-
-    file { 'C:\\ProgramData\\NotepadReplacer\\notepad.exe':
-      ensure => 'link',
-      target => 'C:\\Program Files\\Microsoft VS Code\\code.exe',
-    }
-
-    package { 'notepadreplacer':
-      ensure          => installed,
-      provider        => chocolatey,
-      #  install_options => ['/notepad="C:\Program', 'Files\Notepad++\notepad++.exe"', '/verysilent'],
-      install_options => ['-installarguments', '"/notepad=C:\ProgramData\NotepadReplacer\notepad.exe', '/verysilent"'],
-    }
 
 
 
@@ -266,6 +309,9 @@ node default {
       }
     }
 
+    # hide 'Open with Visual Studio' in folders context menu
+    registry_value {"HKEY_CLASSES_ROOT\\Directory\\shell\\AnyCode\\LegacyDisable": type => string, data => ''}
+    registry_value {"HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\AnyCode\\LegacyDisable": type => string, data => ''}
 
 
     ###########################################################################
@@ -301,8 +347,8 @@ node default {
       package { 'bluescreenview': ensure => present }
       package { 'regfromapp': ensure => present }
       package { 'Sysinternals': ensure => present }
-      package { 'windows-repair-toolbox': ensure => present }
-      package { 'WindowsRepair': ensure => present }
+      #package { 'windows-repair-toolbox': ensure => present }
+      #package { 'WindowsRepair': ensure => present }
     }
 
     ###########################################################################
@@ -515,16 +561,45 @@ node default {
         install_options => ['--params', '"\'/LOCKED:yes', '/COMBINED:yes', '/PEOPLE:no', '/TASKVIEW:no', '/STORE:no', '/CORTANA:no\'"'],
       }
 
-      
-
-            # Hide Recycling Bin from desktop (GPO way)
+      # Hide Recycling Bin from desktop (GPO way)
       registry_key   { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present }
       registry_value {
         "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
         type => dword, data => 0x00000001 }
     }
 
-    
+    ###########################################################################
+    ########## Regedit tweaks ###########################################
+    ###########################################################################
+    if $is_my_user {
+      registry_key {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites": ensure => present}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\App Paths": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\AutoStart(System)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\AutoStart(User)": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Devices - AutorunHandlers": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AutoplayHandlers\\Handlers'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Devices - FormatMap": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Portable Devices\\FormatMap'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Environmental Vars (System)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Session Manager\\Environment'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Environmental Vars (User)": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Environment'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Explorer - My Computer: Additional Folders": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - All": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\AllFilesystemObjects'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Applications": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\Applications'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Unknown": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\Unknown'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - MIME Types": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\MIME\\Database\\Content Type'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Open with": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - PerceivedType": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\SystemFileAssociations'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Links": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\CLSID\\{00021401-0000-0000-C000-000000000046}'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Firewall Rules": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Network Adapters": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\CLSID\\{7007ACC7-3202-11D1-AAD2-00805FC1270E}'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Services": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Browser Helper Objects": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Browser Helper Objects'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - CommandStore (System)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - DriveIcons": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Folders (System)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Folders (User)": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Icons": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Icons'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - OverlayIcons(-ID)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\System Control - Members": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Control Panel\\Extended Properties\\{305CA226-D286-468e-B848-2B2E8E697B74} 2'}
+    }
 
     ###############################################################################
                                     # REGISTER / UNREGISTER  DLL & OCX FILE #	   #
