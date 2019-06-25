@@ -1,3 +1,8 @@
+param (
+    [switch]$d,
+    [switch]$debug
+);
+
 # Get the security principal for the Administrator role
 $myWindowsID=[System.Security.Principal.WindowsIdentity]::GetCurrent()
 $myWindowsPrincipal=new-object System.Security.Principal.WindowsPrincipal($myWindowsID)
@@ -12,8 +17,11 @@ if (-Not ($myWindowsPrincipal.IsInRole($adminRole)))
    exit
 }
 
-
 #run puppet setup script
-puppet apply --modulepath=./environments/production/modules ./environments/production/manifests/site.pp
+if ($d -Or $debug) {
+   puppet apply --debug --modulepath=./environments/production/modules ./environments/production/manifests/site.pp
+} else {
+   puppet apply --modulepath=./environments/production/modules ./environments/production/manifests/site.pp
+}
 
 
