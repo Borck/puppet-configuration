@@ -133,7 +133,11 @@ node default {
 
     if $is_my_pc {
       #package { 'itunes': ensure => latest }  #used MS Store version
-      package { 'mp3tag': ensure => latest }
+      package { 'mp3tag':
+        ensure => latest,
+        install_options => ['--package-parameters=\'"/NoDesktopShortcut', '/NoContextMenu"\'']
+      }
+      registry_key {'HKCR\\Directory\\shellex\\ContextMenuHandlers\\Mp3tagShell': ensure => absent}
 
       # package { 'vcredist2008': ensure => present } # install issue
       package { 'picard': ensure => latest } # MusicBrainz Picard, music tags online grabber, requires 'vcredist2008'
@@ -250,10 +254,13 @@ node default {
     # 'visualstudiocode': ensure => latest is causing errors
     package { 'vscode':
       ensure          => present,
-      install_options => ['--params', '\'/NoDesktopIcon', '/NoQuicklaunchIcon', '/NoContextMenuFiles', '/NoContextMenuFolders\''],
+      install_options => ['--params', '"/NoDesktopIcon', '/NoQuicklaunchIcon', '/NoContextMenuFiles', '/NoContextMenuFolders"'],
     }
     registry_value { 'HKCR\\Applications\\Code.exe\\shell\\open\\icon': ensure => present, type => string, data => '"C:\\Program Files\\Microsoft VS Code\\Code.exe"' }
 
+    # remove 'Open With Code' from directory's context menu
+    registry_value { 'HKCR\\Directory\\shell\\VSCode\\LegacyDisable': type => string}
+    registry_value { 'HKCR\\Directory\\Background\\shell\\VSCode\\LegacyDisable': type => string}
 
     #https://forge.puppet.com/tragiccode/vscode
     # class { 'vscode':
@@ -507,6 +514,33 @@ node default {
     ###########################################################################
 
     if $is_dev_pc {
+      #take ownership context entry
+      # registry_key   {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command': ensure => present}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\': type => string, data => 'Take Ownership'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\NoWorkingDirectory': type => string, data => ''}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command\\': type => string, data => 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command\\IsolatedCommand': type => string, data => 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'}
+
+      # registry_key   {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command': ensure => present}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\': type => string, data => 'Take Ownership'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\NoWorkingDirectory': type => string, data => ''}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command\\': type => string, data => 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command\\IsolatedCommand': type => string, data => 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'}
+
+      # registry_key   {'HKCR\\*\\shell\\manage_menu': ensure => present}
+      # registry_value {'HKCR\\*\\shell\\manage_menu\\SubCommands': type => string, data => 'Windows.takeownership.files'}
+      # registry_value {'HKCR\\*\\shell\\manage_menu\\': type => string, data => 'Manage'}
+      # registry_value {'HKCR\\*\\shell\\manage_menu\\icon': type => string, data => '%SystemRoot%\\System32\\shell32.dll,-137'}
+
+      # registry_key   {'HKCR\\Directory\\shell\\manage_menu': ensure => present}
+      # registry_value {'HKCR\\Directory\\shell\\manage_menu\\SubCommands': type => string, data => 'Windows.takeownership.directories'}
+      # registry_value {'HKCR\\Directory\\shell\\manage_menu\\': type => string, data => 'Manage'}
+      # registry_value {'HKCR\\Directory\\shell\\manage_menu\\icon': type => string, data => '%SystemRoot%\\System32\\shell32.dll,-137'}
+      # registry_key   {'HKCR\\Directory\\Background\\shell\\manage_menu': ensure => present}
+      # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\SubCommands': type => string, data => 'Windows.takeownership.directories'}
+      # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\': type => string, data => 'Manage'}
+      # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\icon': type => string, data => '%SystemRoot%\\System32\\shell32.dll,-137'}
+
 
       #enable checkboxes
       registry_value { "${hkcu}\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\AutoCheckSelect":
@@ -592,6 +626,7 @@ node default {
       registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - PerceivedType": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\SystemFileAssociations'}
       registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Links": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\CLSID\\{00021401-0000-0000-C000-000000000046}'}
       registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Firewall Rules": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\MUICache": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Software\\Classes\\Local Settings\\MuiCache'}
       registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Network Adapters": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\CLSID\\{7007ACC7-3202-11D1-AAD2-00805FC1270E}'}
       registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Services": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services'}
       registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Browser Helper Objects": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Browser Helper Objects'}
