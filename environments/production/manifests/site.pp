@@ -112,6 +112,35 @@ node default {
 
     # disabled because 'present' and 'latest' causes errors and downloading setup exe each time, which takes around 70 s
     # package { 'inkscape': ensure => present }
+    $inkscape = "C:\\Program Files (x86)\\inkscape\\inkscape.exe"
+    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\icon': type => string, data => "\"${inkscape}\", 0"}
+
+    registry_key {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu': ensure => present}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu\\ExtendedSubCommandsKey': type => string, data => 'Applications\\inkscape.exe\\ContextMenus\\converters'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu\\': type => string, data => 'Convert'}
+
+    registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\command': ensure => present}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\icon': type => string, data => "\"${inkscape}\", 0"}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\': type => string, data => 'Convert to PNG'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\command\\': type => string, data => "\"${inkscape}\" -z \"%1\" -e \"%1.png\""}
+
+    registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\command': ensure => present}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\icon': type => string, data => "\"${inkscape}\", 0"}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\': type => string, data => 'Convert to PS'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\command\\': type => string, data => "\"${inkscape}\" -z \"%1\" -P \"%1.ps\""}
+
+    registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\command': ensure => present}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\icon': type => string, data => "\"${inkscape}\", 0"}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\': type => string, data => 'Convert to EPS'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\command\\': type => string, data => "\"${inkscape}\" -z \"%1\" -E \"%1.eps\""}
+
+    registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\command': ensure => present}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\icon': type => string, data => "\"${inkscape}\", 0"}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\': type => string, data => 'Convert to PDF'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\command\\': type => string, data => "\"${inkscape}\" -z \"%1\" -A \"%1.pdf\""}
+
+
+
     package { 'sketchup': ensure => latest }  # sketchup 2017, last free version
 
     package { 'caesium.install': ensure => present }
@@ -182,7 +211,7 @@ node default {
     package { 'notepadreplacer':
       ensure          => installed,
       provider        => chocolatey,
-      install_options => ['-installarguments', '"/notepad=C:\ProgramData\NotepadReplacer\notepad.exe', '/verysilent"'],
+      install_options => ['-installarguments', "\"/notepad=${notepad_replace_helperlink}", '/verysilent"'],
     }
 
     registry_value {'HKCR\\SystemFileAssociations\\text\\shell\\open\\icon': type => string, data => $notepad_replace_helperlink}
@@ -256,7 +285,10 @@ node default {
       ensure          => present,
       install_options => ['--params', '"/NoDesktopIcon', '/NoQuicklaunchIcon', '/NoContextMenuFiles', '/NoContextMenuFolders"'],
     }
-    registry_value { 'HKCR\\Applications\\Code.exe\\shell\\open\\icon': ensure => present, type => string, data => '"C:\\Program Files\\Microsoft VS Code\\Code.exe"' }
+    registry_value { 'HKCR\\Applications\\Code.exe\\shell\\open\\icon':
+      ensure => present,
+      type   => string,
+      data   => '"C:\\Program Files\\Microsoft VS Code\\Code.exe", 0' }
 
     # remove 'Open With Code' from directory's context menu
     registry_value { 'HKCR\\Directory\\shell\\VSCode\\LegacyDisable': type => string}
