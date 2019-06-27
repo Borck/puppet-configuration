@@ -110,9 +110,62 @@ node default {
       registry_value { 'HKCR\\Directory\\shell\\PlayWithVLC\\LegacyDisable': ensure => present, type => string, data => '' }
     }
 
-    # disabled because 'present' and 'latest' causes errors and downloading setup exe each time, which takes around 70 s
-    # package { 'inkscape': ensure => present }
-    $inkscape = "C:\\Program Files (x86)\\inkscape\\inkscape.exe"
+    package { 'sketchup': ensure => latest }  # sketchup 2017, last free version
+
+    package { 'caesium.install': ensure => present }
+    file { 'caesium.shortcut':
+      path    => 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Caesium\\Caesium - Image Converter.lnk',
+      ensure  => present,
+      source  => "puppet:///modules/windows_tool_helper/caesium/Caesium_${::architecture}.lnk",
+      require => Package['caesium.install']
+    }
+    file { 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Caesium\\Caesium.lnk':
+      ensure => absent,
+    }
+
+    package { 'handbrake': ensure => latest }
+    package { 'FileOptimizer': ensure => latest }
+
+    package { 'audacity': ensure => latest }
+    package { 'audacity-lame': ensure => latest }
+
+    package { 'Calibre': ensure => latest } # convert * to ebook
+
+    if $is_my_pc {
+      #package { 'itunes': ensure => latest }  #used MS Store version
+      package { 'mp3tag':
+        ensure          => latest,
+        install_options => ['--package-parameters=\'"/NoDesktopShortcut', '/NoContextMenu"\'']
+      }
+      registry_key {'HKCR\\Directory\\shellex\\ContextMenuHandlers\\Mp3tagShell': ensure => absent}
+
+      # package { 'vcredist2008': ensure => present } # install issue
+      package { 'picard': ensure => latest } # MusicBrainz Picard, music tags online grabber, requires 'vcredist2008'
+
+      #package { 'mkvtoolnix': ensure => latest } #not in use
+    }
+
+    if $is_my_user {
+      #nuke Windows Media Player
+      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\audio\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\SystemFileAssociations\\audio\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      #registry_value { 'HKCR\\SystemFileAssociations\\video\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
+      #registry_value { 'HKCR\\SystemFileAssociations\\video\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_key { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo': ensure => absent }
+      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo\\': ensure => absent, type => string, data => '{7AD84985-87B4-4a16-BE58-8B72A5B390F7}' }
+    }
+
+    ###########################################################################
+    ########## SVG/Inkscape ###################################################
+    ###########################################################################
+    package { 'inkscape': ensure => latest }
+    $inkscape = "C:\\Program Files\\inkscape\\inkscape.exe"
     registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\icon': type => string, data => "\"${inkscape}\", 0"}
 
     registry_key {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu': ensure => present}
@@ -139,56 +192,6 @@ node default {
     registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\': type => string, data => 'Convert to PDF'}
     registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\command\\': type => string, data => "\"${inkscape}\" -z \"%1\" -A \"%1.pdf\""}
 
-
-
-    package { 'sketchup': ensure => latest }  # sketchup 2017, last free version
-
-    package { 'caesium.install': ensure => present }
-    file { 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Caesium\\Caesium - Image Converter.exe':
-      ensure => 'link',
-      target => 'C:\\Program Files (x86)\\Caesium\\Caesium.exe',
-    }
-    file { 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Caesium\\Caesium.lnk':
-      ensure => absent,
-    }
-
-    package { 'handbrake': ensure => latest }
-    package { 'FileOptimizer': ensure => latest }
-
-    package { 'audacity': ensure => latest }
-    package { 'audacity-lame': ensure => latest }
-
-    package { 'Calibre': ensure => latest } # convert * to ebook
-
-    if $is_my_pc {
-      #package { 'itunes': ensure => latest }  #used MS Store version
-      package { 'mp3tag':
-        ensure => latest,
-        install_options => ['--package-parameters=\'"/NoDesktopShortcut', '/NoContextMenu"\'']
-      }
-      registry_key {'HKCR\\Directory\\shellex\\ContextMenuHandlers\\Mp3tagShell': ensure => absent}
-
-      # package { 'vcredist2008': ensure => present } # install issue
-      package { 'picard': ensure => latest } # MusicBrainz Picard, music tags online grabber, requires 'vcredist2008'
-
-      #package { 'mkvtoolnix': ensure => latest } #not in use
-    }
-
-    if $is_my_user {
-      #nuke Windows Media Player
-      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
-      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\audio\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\audio\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
-      #registry_value { 'HKCR\\SystemFileAssociations\\video\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      #registry_value { 'HKCR\\SystemFileAssociations\\video\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_key { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo': ensure => absent }
-      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo\\': ensure => absent, type => string, data => '{7AD84985-87B4-4a16-BE58-8B72A5B390F7}' }
-    }
 
 
     ###########################################################################
