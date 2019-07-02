@@ -286,16 +286,12 @@ node default {
     # 'visualstudiocode': ensure => latest is causing errors
     package { 'vscode':
       ensure          => present,
-      install_options => ['--params', '"/NoDesktopIcon', '/NoQuicklaunchIcon', '/NoContextMenuFiles', '/NoContextMenuFolders"'],
+      install_options => ['--params', '"/NoDesktopIcon', '/NoQuicklaunchIcon"'], # ', '/NoContextMenuFiles', '/NoContextMenuFolders
     }
     registry_value { 'HKCR\\Applications\\Code.exe\\shell\\open\\icon':
       ensure => present,
       type   => string,
       data   => '"C:\\Program Files\\Microsoft VS Code\\Code.exe", 0' }
-
-    # remove 'Open With Code' from directory's context menu
-    registry_value { 'HKCR\\Directory\\shell\\VSCode\\LegacyDisable': type => string}
-    registry_value { 'HKCR\\Directory\\Background\\shell\\VSCode\\LegacyDisable': type => string}
 
     #https://forge.puppet.com/tragiccode/vscode
     # class { 'vscode':
@@ -349,6 +345,7 @@ node default {
 
       if !$is_my_pc {
         package { 'unity': ensure => present }
+        package { 'unity-standard-assets': ensure => present }
         # Game development with Unity workload for Visual Studio 2017
         package { 'visualstudio2017-workload-managedgame': ensure => present }
       }
@@ -440,7 +437,7 @@ node default {
     }
 
     ###########################################################################
-    ########## File types #####################################################
+    ########## File/Directory icons ###########################################
     ###########################################################################
     $icons = 'C:\\Windows\\Icons.puppet'
     file { $icons:
@@ -456,7 +453,6 @@ node default {
     ## archives ##
 
     $icons_archives = "${icons}\\7_zip_filetype_theme___windows_10_by_masamunecyrus-d93yxyk"
-
     reg_ensure_archive_ext {
         '001' : icondirectory => $icons_archives;
         '7z' : icondirectory => $icons_archives;
@@ -469,13 +465,22 @@ node default {
 
 
     ## graphics ##
-
     package { 'svg-explorer-extension': ensure => present }
     reg_ensure_file_ext {       'svg' : display_name => 'Scalable Vector Graphics', icon => "${icons}\\svgfile.ico" }
     reg_ensure_file_ext_value { 'svg\\Content Type'  : value => 'image/svg+xml' }
     reg_ensure_file_ext_value { 'svg\\PerceivedType' : value => 'image' }
 
 
+    if $is_my_user {
+      # recycle bin
+      # https://www.tenforums.com/tutorials/12479-change-recycle-bin-icon-windows-10-a.html#option1
+
+      # TODO icons may not change on windows 10 >= 1903
+      $recyclebin_icons_reg = "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}\\DefaultIcon"
+      registry_value { "${recyclebin_icons_reg}\\": ensure => present, type => string, data => "${icons}\\recycle-bin-full.ico,0" }
+      registry_value { "${recyclebin_icons_reg}\\empty": ensure => present, type => string, data => "${icons}\\recycle-bin-empty.ico,0" }
+      registry_value { "${recyclebin_icons_reg}\\full": ensure => present, type => string, data => "${icons}\\recycle-bin-full.ico,0" }
+    }
 
     ###########################################################################
     ########## This PC tweaks #################################################
