@@ -98,7 +98,21 @@ node default {
       package { 'adobereader': ensure => present }
     }
 
+    if $::architecture == 'x64' {
+      # [..] index Adobe PDF documents using Microsoft indexing clients. This allows the user to easily search for text
+      # within Adobe PDF documents. [..]
+      package { 'pdf-ifilter-64': ensure => latest }
+    }
 
+
+
+    ###########################################################################
+    ########## Gaming #########################################################
+    ###########################################################################
+    if $is_my_pc {
+      #package { 'origin': ensure => latest }
+      package { 'steam': ensure => present }
+    }
 
     ###########################################################################
     ########## Media tools/tweaks #############################################
@@ -166,6 +180,8 @@ node default {
     ###########################################################################
     package { 'inkscape': ensure => latest }
     $inkscape = "C:\\Program Files\\inkscape\\inkscape.exe"
+    registry_key   {'HKCR\\Applications\\inkscape.exe\\shell\\open\\command': ensure => present}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\command\\': type => string, data => "\"${inkscape}\", \"%1\""}
     registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\icon': type => string, data => "\"${inkscape}\", 0"}
 
     registry_key {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu': ensure => present}
@@ -232,7 +248,7 @@ node default {
     ########## Development ####################################################
     ###########################################################################
 
-    package { 'jdk8': ensure => present }
+    package { 'jdk8': ensure => present } # latest may dumping your system, 20190628
 
     if $is_dev_pc {
 
@@ -336,6 +352,8 @@ node default {
       package { 'visualstudio2017-workload-vctools': ensure => present }
       package { 'visualstudio2017-workload-visualstudioextension': ensure => present }
 
+      # creating windows installers
+      #package { 'wixtoolset': ensure => present } # manual installation of *.vsix failed
       #package { 'visualsvn': ensure => present } #to old, not working with VS2017
 
       # jetbrains
@@ -688,14 +706,6 @@ node default {
       registry_value   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Register\\command': type => string, data => 'regsvr32.exe "%L"' }
       registry_key   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Unregister\\command': ensure => present }
       registry_value   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Unregister\\command': type => string, data => 'regsvr32.exe /u %L' }
-    }
-
-    ###########################################################################
-    ########## Gaming #########################################################
-    ###########################################################################
-    if $is_my_pc {
-      #package { 'origin': ensure => latest }
-      package { 'steam': ensure => present }
     }
   }
 }
