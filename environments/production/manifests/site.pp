@@ -29,7 +29,7 @@ node default {
   #include stdlib
 
   if $::kernel == 'windows' {
- 
+
     $username = $identity['user']
     $hkcu = "HKU\\${identity2['sid']}"
 
@@ -53,7 +53,7 @@ node default {
     ###########################################################################
     ########## Office #########################################################
     ###########################################################################
-    if $is_my_user {
+    if $is_my_pc {
       package { 'office365proplus': ensure => present }
     }
 
@@ -128,8 +128,8 @@ node default {
 
     package { 'caesium.install': ensure => present }
     file { 'caesium.shortcut':
-      path    => 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Caesium\\Caesium - Image Converter.lnk',
       ensure  => present,
+      path    => 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Caesium\\Caesium - Image Converter.lnk',
       source  => "puppet:///modules/windows_tool_helper/caesium/Caesium_${::architecture}.lnk",
       require => Package['caesium.install']
     }
@@ -143,9 +143,9 @@ node default {
     package { 'audacity': ensure => latest }
     package { 'audacity-lame': ensure => latest }
 
-    package { 'Calibre': ensure => latest } # convert * to ebook
-
     if $is_my_pc {
+      package { 'Calibre': ensure => latest } # convert * to ebook
+
       #package { 'itunes': ensure => latest }  #used MS Store version
       package { 'mp3tag':
         ensure          => latest,
@@ -228,8 +228,7 @@ node default {
     file { $notepad_replace_helperlink: ensure => 'link', target => $default_text_editor }
 
     package { 'notepadreplacer':
-      ensure          => installed,
-      provider        => chocolatey,
+      ensure          => present,
       install_options => ['-installarguments', "\"/notepad=${notepad_replace_helperlink}", '/verysilent"'],
     }
 
@@ -248,11 +247,11 @@ node default {
     ########## Development ####################################################
     ###########################################################################
 
-    package { 'jdk8': ensure => present } # latest may dumping your system, 20190628
+    package { 'jdk8': ensure => present } # 'ensure => latest' may dumping your system, 20190628
 
     if $is_dev_pc {
-
-      package { 'eclipse': ensure => '4.10', install_options => ['--params', '"/Multi-User"'] }
+      #not required yet
+      #package { 'eclipse': ensure => '4.10', install_options => ['--params', '"/Multi-User"'] }
 
       package { 'make': ensure => present }
       #package { 'cmake': ensure => latest, install_options => ["--installargs", "'DESKTOP_SHORTCUT_REQUESTED=0'", 
@@ -267,7 +266,7 @@ node default {
       package { 'hxd': ensure => latest }
 
       # inspecting PE formatted binaries such aswindows EXEs and DLLs. 
-      # package { 'pestudio': ensure => present } # 404
+      # package { 'pestudio': ensure => present } # deprecated
 
       # git
       package { 'git': ensure => latest }
@@ -359,9 +358,9 @@ node default {
       package { 'dottrace': ensure => present } # performance profiler
       package { 'dotmemory': ensure => present } # memory profiler
 
-      package { 'arduino': ensure => present }
-
-      if !$is_my_pc {
+      if $is_my_pc {
+        package { 'arduino': ensure => present }
+      } else {
         package { 'unity': ensure => present }
         package { 'unity-standard-assets': ensure => present }
         # Game development with Unity workload for Visual Studio 2017
@@ -377,14 +376,11 @@ node default {
     ###########################################################################
     ########## Administration #################################################
     ###########################################################################
-
     package { 'sdio': ensure => latest } # Snappy Driver Installer Origin (open source)
-
 
     if $is_my_pc {
       package { 'winaero-tweaker': ensure => latest }
     }
-
 
     package { 'curl': ensure => present }
     package { 'wget': ensure => present }
@@ -435,7 +431,7 @@ node default {
       registry_key   { 'HKCR\\Directory\\shell\\Terminals':                          ensure => present }
       registry_value { 'HKCR\\Directory\\shell\\Terminals\\Icon':                    type => string, data =>  $reg_dir_terminals_icon }
       registry_value { 'HKCR\\Directory\\shell\\Terminals\\SubCommands':             type => string, data => $reg_dir_terminals }
- 
+
       registry_key   { 'HKCR\\Drive\\Background\\shell\\Terminals':              ensure => present }
       registry_value { 'HKCR\\Drive\\Background\\shell\\Terminals\\Icon':        type => string, data =>  $reg_dir_terminals_icon }
       registry_value { 'HKCR\\Drive\\Background\\shell\\Terminals\\SubCommands': type => string, data => $reg_dir_terminals }
@@ -449,7 +445,8 @@ node default {
       registry_key   { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command':      ensure => present }
       registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\HasLUAShield': ensure => present, data => '' }
       registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\MUIVerb':      ensure => present, data => '@shell32.dll,-37448' }
-      registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command\\':    ensure => present,
+      registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command\\':
+        ensure => present,
         data   => 'powershell.exe "-Command" "if((Get-ExecutionPolicy ) -ne \'AllSigned\') { Set-ExecutionPolicy -Scope Process Bypass }; & \'%1\'"'
       }
     }
@@ -492,8 +489,12 @@ node default {
     if $is_my_user {
       # recycle bin
       # https://www.tenforums.com/tutorials/12479-change-recycle-bin-icon-windows-10-a.html#option1
+      # if icons not applied, maybe 'Remove Recycling Bin from Desktop' from GPO have to be disabled,
+      # NOTE: the recycling bin can also be remove on 'Configure Desktop Icons' window, [WIN]+[R] and type:
+      #       rundll32.EXE shell32.dll,Control_RunDLL desk.cpl,,0
+      # NOTE: https://www.windows-faq.de/2017/12/27/papierkorb-symbol-nicht-auf-dem-desktop-anzeigen/ 
 
-      # TODO icons may not change on windows 10 >= 1903
+
       $recyclebin_icons_reg = "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}\\DefaultIcon"
       registry_value { "${recyclebin_icons_reg}\\": ensure => present, type => string, data => "${icons}\\recycle-bin-full.ico,0" }
       registry_value { "${recyclebin_icons_reg}\\empty": ensure => present, type => string, data => "${icons}\\recycle-bin-empty.ico,0" }
