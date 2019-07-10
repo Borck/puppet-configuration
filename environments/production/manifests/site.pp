@@ -218,6 +218,7 @@ node default {
     #$default_text_editor = '%SystemRoot%\system32\NOTEPAD.EXE'
 
     # change *.txt file association
+    registry_key   {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice": ensure => present}
     registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\Hash": type => string, data => 'hK1YV2FCtgs='}
     registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\ProgId": type => string, data => 'Applications\\code.exe'}
 
@@ -494,11 +495,15 @@ node default {
       #       rundll32.EXE shell32.dll,Control_RunDLL desk.cpl,,0
       # NOTE: https://www.windows-faq.de/2017/12/27/papierkorb-symbol-nicht-auf-dem-desktop-anzeigen/ 
 
-
       $recyclebin_icons_reg = "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}\\DefaultIcon"
       registry_value { "${recyclebin_icons_reg}\\": ensure => present, type => string, data => "${icons}\\recycle-bin-full.ico,0" }
       registry_value { "${recyclebin_icons_reg}\\empty": ensure => present, type => string, data => "${icons}\\recycle-bin-empty.ico,0" }
       registry_value { "${recyclebin_icons_reg}\\full": ensure => present, type => string, data => "${icons}\\recycle-bin-full.ico,0" }
+
+      registry_key   { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present }
+      # set to zero (disabled), because of issues with customized icons
+      registry_value { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
+        type => dword, data => 0x00000000 }
     }
 
     ###########################################################################
@@ -657,11 +662,6 @@ node default {
         install_options => ['--params', '"\'/LOCKED:yes', '/COMBINED:yes', '/PEOPLE:no', '/TASKVIEW:no', '/STORE:no', '/CORTANA:no\'"'],
       }
 
-      # Hide Recycling Bin from desktop (GPO way)
-      registry_key   { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present }
-      registry_value {
-        "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
-        type => dword, data => 0x00000001 }
     }
 
     ###########################################################################
