@@ -30,6 +30,18 @@ node default {
 
   if $::kernel == 'windows' {
 
+    ###########################################################################
+    ########## TODO ###########################################################
+    ###########################################################################
+
+    #https://stackoverflow.com/questions/24579193/how-do-i-automatically-keep-all-locally-installed-chocolatey-packages-up-to-date
+
+
+
+    ###########################################################################
+    ########## Configuration ##################################################
+    ###########################################################################
+
     $username = $identity['user']
     $hkcu = "HKU\\${identity2['sid']}"
 
@@ -49,7 +61,6 @@ node default {
     Package { provider => chocolatey }
 
 
-
     ###########################################################################
     ########## Office #########################################################
     ###########################################################################
@@ -58,7 +69,6 @@ node default {
     }
 
     package { 'firefox': ensure => present } #firefox have a very silent update mechanism
-
     package { 'EdgeDeflector': ensure => latest } #redirects URIs to the default browser (caution: menu popup)
 
 
@@ -70,17 +80,6 @@ node default {
     package { 'AutoHotKey': ensure => latest }
     package { 'runasdate': ensure => latest }
 
-    package { 'bulkrenameutility': ensure => latest }
-    registry_key {"HKEY_CLASSES_ROOT\\*\\shellex\\ContextMenuHandlers\\BRUMenuHandler": ensure => absent}
-    registry_key {"HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler": ensure => absent}
-    registry_key {"HKEY_CLASSES_ROOT\\Drive\\shellex\\ContextMenuHandlers\\BRUMenuHandler": ensure => absent}
-    #registry_value {"HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler\\": type => string, data => '{5D924130-4CB1-11DB-B0DE-0800200C9A66}'}
-
-    package { 'dupeguru': ensure => latest }
-
-    package { 'lockhunter': ensure => latest }
-
-
     # rainmeter is unofficial and not a silent installer
     # package { 'rainmeter': ensure => latest }
 
@@ -88,15 +87,13 @@ node default {
       # package { 'cloudstation': ensure => present } # Synology Cloud Station Drive, synology drive used instead
 
       package { 'ghostscript': ensure => present }
-      package { 'miktex': ensure => present }
-      package { 'texstudio': ensure => present }
-      package { 'jabref': ensure => present }
+      package { ['miktex', 'texstudio', 'jabref']: ensure => present }
       package { 'yed': ensure => latest }
-      # package { 'dropbox': ensure => present } # not yet installed
     } else {
       #package { 'googlechrome': ensure => present }
-      package { 'adobereader': ensure => present }
+      #package { 'adobereader': ensure => present } 
     }
+
 
     if $::architecture == 'x64' {
       # [..] index Adobe PDF documents using Microsoft indexing clients. This allows the user to easily search for text
@@ -105,14 +102,22 @@ node default {
     }
 
 
+    ###########################################################################
+    ########## File Management ################################################
+    ###########################################################################
 
-    ###########################################################################
-    ########## Gaming #########################################################
-    ###########################################################################
-    if $is_my_pc {
-      #package { 'origin': ensure => latest }
-      package { 'steam': ensure => present }
-    }
+    package { 'dupeguru': ensure => latest }
+    package { 'lockhunter': ensure => latest }
+    package { 'windirstat': ensure => latest }
+    package { 'junction-link-magic': ensure => present }
+    package { 'bulkrenameutility': ensure => latest }
+    registry_key { [
+        'HKEY_CLASSES_ROOT\\*\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
+        'HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
+        'HKEY_CLASSES_ROOT\\Drive\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
+      ] : ensure => absent, require => Package['bulkrenameutility'] }
+    #registry_value {"HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler\\": type => string, data => '{5D924130-4CB1-11DB-B0DE-0800200C9A66}'}
+
 
     ###########################################################################
     ########## Media tools/tweaks #############################################
@@ -120,8 +125,10 @@ node default {
 
     package { 'vlc': ensure => latest }
     if $is_my_user {
-      registry_value { 'HKCR\\Directory\\shell\\AddToPlaylistVLC\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\Directory\\shell\\PlayWithVLC\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { [
+          'HKCR\\Directory\\shell\\AddToPlaylistVLC\\LegacyDisable',
+          'HKCR\\Directory\\shell\\PlayWithVLC\\LegacyDisable'
+        ]: ensure => present, type => string, require => Package['vlc'] }
     }
 
     package { 'sketchup': ensure => latest }  # sketchup 2017, last free version
@@ -140,8 +147,7 @@ node default {
     package { 'handbrake': ensure => latest }
     package { 'FileOptimizer': ensure => latest }
 
-    package { 'audacity': ensure => latest }
-    package { 'audacity-lame': ensure => latest }
+    package { ['audacity', 'audacity-lame']: ensure => latest }
 
     if $is_my_pc {
       package { 'Calibre': ensure => latest } # convert * to ebook
@@ -151,7 +157,7 @@ node default {
         ensure          => latest,
         install_options => ['--package-parameters=\'"/NoDesktopShortcut', '/NoContextMenu"\'']
       }
-      registry_key {'HKCR\\Directory\\shellex\\ContextMenuHandlers\\Mp3tagShell': ensure => absent}
+      registry_key {'HKCR\\Directory\\shellex\\ContextMenuHandlers\\Mp3tagShell': ensure => absent, require => Package['mp3tag']}
 
       # package { 'vcredist2008': ensure => present } # install issue
       package { 'picard': ensure => latest } # MusicBrainz Picard, music tags online grabber, requires 'vcredist2008'
@@ -161,18 +167,21 @@ node default {
 
     if $is_my_user {
       #nuke Windows Media Player
-      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
-      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\audio\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      registry_value { 'HKCR\\SystemFileAssociations\\audio\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
-      #registry_value { 'HKCR\\SystemFileAssociations\\video\\shell\\Enqueue\\LegacyDisable': ensure => present, type => string, data => '' }
-      #registry_value { 'HKCR\\SystemFileAssociations\\video\\shell\\Play\\LegacyDisable': ensure => present, type => string, data => '' }
+      registry_value { [
+          'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Enqueue\\LegacyDisable',
+          'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Play\\LegacyDisable',
+          'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Enqueue\\LegacyDisable',
+          'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Play\\LegacyDisable',
+          #'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Enqueue\\LegacyDisable',
+          #'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Play\\LegacyDisable',
+          'HKCR\\SystemFileAssociations\\audio\\shell\\Enqueue\\LegacyDisable',
+          'HKCR\\SystemFileAssociations\\audio\\shell\\Play\\LegacyDisable',
+          #'HKCR\\SystemFileAssociations\\video\\shell\\Enqueue\\LegacyDisable',
+          #'HKCR\\SystemFileAssociations\\video\\shell\\Play\\LegacyDisable',
+        ]: ensure => present, type => string }
       registry_key { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo': ensure => absent }
-      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo\\': ensure => absent, type => string, data => '{7AD84985-87B4-4a16-BE58-8B72A5B390F7}' }
+      #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo\\': 
+        #ensure => absent, type => string, data => '{7AD84985-87B4-4a16-BE58-8B72A5B390F7}' }
     }
 
     ###########################################################################
@@ -272,21 +281,24 @@ node default {
       # git
       package { 'git': ensure => latest }
       # remove git from context menu, tortoisegit will replace it
-      registry_key { 'HKCR\\Directory\\shell\\git_gui': ensure => present }
-      registry_value { 'HKCR\\Directory\\shell\\git_gui\\LegacyDisable': ensure => present, type => string }
-      registry_key { 'HKCR\\Directory\\shell\\git_shell': ensure => present }
-      registry_value { 'HKCR\\Directory\\shell\\git_shell\\LegacyDisable': ensure => present, type => string }
-      registry_key { 'HKCR\\Directory\\Background\\shell\\git_gui': ensure => present }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\git_gui\\LegacyDisable': ensure => present, type => string }
-      registry_key { 'HKCR\\Directory\\Background\\shell\\git_shell': ensure => present }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\git_shell\\LegacyDisable': ensure => present, type => string }
+
+      registry_key { [
+        'HKCR\\Directory\\shell\\git_gui',
+        'HKCR\\Directory\\shell\\git_shell',
+        'HKCR\\Directory\\Background\\shell\\git_gui',
+        'HKCR\\Directory\\Background\\shell\\git_shell',
+        ]: ensure => present, require => Package['git'] }
+      registry_value { [
+        'HKCR\\Directory\\shell\\git_gui\\LegacyDisable',
+        'HKCR\\Directory\\shell\\git_shell\\LegacyDisable',
+        'HKCR\\Directory\\Background\\shell\\git_gui\\LegacyDisable',
+        'HKCR\\Directory\\Background\\shell\\git_shell\\LegacyDisable',
+        ]: ensure => present, type => string, require => Package['git'] }
 
       # installing tortoisegit can fail if non-package-version is installed
       # 'tortoisegit': ensure => latest is causing errors
       package { 'tortoisegit': ensure => present }
-
       package { 'tortoisesvn': ensure => latest }
-
       package { 'sourcetree': ensure => present }
 
       # package { 'python3': ensure => '3.6.0', install_options => ['--params', '/InstallDir', '"c:\\program', 'files\\Python\\Python36"']}
@@ -304,10 +316,12 @@ node default {
       ensure          => present,
       install_options => ['--params', '"/NoDesktopIcon', '/NoQuicklaunchIcon"'], # ', '/NoContextMenuFiles', '/NoContextMenuFolders
     }
+
     registry_value { 'HKCR\\Applications\\Code.exe\\shell\\open\\icon':
-      ensure => present,
-      type   => string,
-      data   => '"C:\\Program Files\\Microsoft VS Code\\Code.exe", 0' }
+      ensure  => present,
+      type    => string,
+      data    => '"C:\\Program Files\\Microsoft VS Code\\Code.exe", 0',
+      require => Package['vscode']}
 
     #https://forge.puppet.com/tragiccode/vscode
     # class { 'vscode':
@@ -336,42 +350,51 @@ node default {
     ###########################################################################
 
     if $is_dev_pc {
-      package { 'visualstudio2017enterprise': ensure => present }
-
-      package { 'visualstudio2017-workload-azure': ensure => present }
-      package { 'visualstudio2017-workload-data': ensure => present }
-      package { 'visualstudio2017-workload-manageddesktop': ensure => present }
-      package { 'visualstudio2017-workload-nativecrossplat': ensure => present }
-      package { 'visualstudio2017-workload-nativedesktop': ensure => present }
-      package { 'visualstudio2017-workload-netcoretools': ensure => present }
-      package { 'visualstudio2017-workload-universal': ensure => present }
-      package { 'visualstudio2017-workload-vctools': ensure => present }
-      package { 'visualstudio2017-workload-visualstudioextension': ensure => present }
+      package { [
+        'visualstudio2017enterprise',
+        'visualstudio2017-workload-data',
+        'visualstudio2017-workload-manageddesktop',
+        'visualstudio2017-workload-nativecrossplat',
+        'visualstudio2017-workload-nativedesktop',
+        'visualstudio2017-workload-netcoretools',
+        #'visualstudio2017-workload-universal',
+        'visualstudio2017-workload-vctools',
+        'visualstudio2017-workload-visualstudioextension'
+        ]: ensure => present }
 
       # creating windows installers
       #package { 'wixtoolset': ensure => present } # manual installation of *.vsix failed
       #package { 'visualsvn': ensure => present } #to old, not working with VS2017
 
       # jetbrains
-      package { 'resharper': ensure => present }
-      package { 'dotpeek': ensure => present } # decompiler
-      package { 'dotcover': ensure => present } # unit test runner and code coverage
-      package { 'dottrace': ensure => present } # performance profiler
-      package { 'dotmemory': ensure => present } # memory profiler
+      package { ['resharper', 'dotpeek', 'dotcover', 'dottrace', 'dotmemory']: ensure => present }
 
       if $is_my_pc {
         package { 'arduino': ensure => present }
       } else {
-        package { 'unity': ensure => present }
-        package { 'unity-standard-assets': ensure => present }
-        # Game development with Unity workload for Visual Studio 2017
-        package { 'visualstudio2017-workload-managedgame': ensure => present }
+        package { ['unity', 'unity-standard-assets']: ensure => present }
+        package { 'visualstudio2017-workload-managedgame':
+          ensure  => present,
+          require => [
+            Package['visualstudio2017enterprise'],
+            Package['unity'],
+          ],
+        }
       }
     }
 
-    # hide 'Open with Visual Studio' in folders context menu
-    registry_value {"HKEY_CLASSES_ROOT\\Directory\\shell\\AnyCode\\LegacyDisable": type => string, data => ''}
-    registry_value {"HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\AnyCode\\LegacyDisable": type => string, data => ''}
+    # not needed yet: hide 'Open with Visual Studio' in folders context menu
+    # registry_value {"HKEY_CLASSES_ROOT\\Directory\\shell\\AnyCode\\LegacyDisable": type => string, data => ''}
+    # registry_value {"HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\AnyCode\\LegacyDisable": type => string, data => ''}
+
+
+    ###########################################################################
+    ########## Gaming #########################################################
+    ###########################################################################
+    if $is_my_pc {
+      #package { 'origin': ensure => latest }
+      package { 'steam': ensure => present }
+    }
 
 
     ###########################################################################
@@ -383,18 +406,13 @@ node default {
       package { 'winaero-tweaker': ensure => latest }
     }
 
-    package { 'curl': ensure => present }
-    package { 'wget': ensure => present }
+    package { ['curl', 'wget']: ensure => present }
 
     if $is_dev_pc {
       package { 'putty': ensure => latest }
       package { 'winscp': ensure => latest }
       package { 'wireshark': ensure => latest }
       package { 'CloseTheDoor': ensure => present } # close tcp/udp ports
-
-
-      package { 'windirstat': ensure => latest }
-      package { 'junction-link-magic': ensure => present }
 
       #package { 'win32diskimager': ensure => present }
       package { 'etcher': ensure => latest } # image to usb drive or sd card
@@ -409,42 +427,34 @@ node default {
     }
 
     ###########################################################################
-    ########## Terminal tweaks ################################################
+    ########## File Explorer Tweaks ###########################################
     ###########################################################################
 
     if $is_dev_pc {
       #add 'command prompt' and powershell to context menu of folders and drives
-      #remove obsolete entries
-      registry_key   { 'HKCR\\Directory\\ContextMenus\\MenuCmd': ensure => absent }
-      registry_key   { 'HKCR\\Directory\\ContextMenus\\MenuPowerShell': ensure => absent }
-      registry_key   { 'HKCR\\Directory\\Background\\shell\\01MenuCmd': ensure => absent }
-      registry_key   { 'HKCR\\Directory\\Background\\shell\\02MenuPowerShell': ensure => absent }
-      registry_key   { 'HKCR\\Directory\\shell\\01MenuCmd': ensure => absent }
-      registry_key   { 'HKCR\\Directory\\shell\\02MenuPowerShell': ensure => absent }
-
-
-      $reg_dir_terminals_icon = 'imageres.dll,-5323'
-      $reg_dir_terminals = 'Windows.MultiVerb.cmd;Windows.MultiVerb.cmdPromptAsAdministrator;|;Windows.MultiVerb.Powershell;Windows.MultiVerb.PowershellAsAdmin'
-
-      registry_key   { 'HKCR\\Directory\\Background\\shell\\Terminals':              ensure => present }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\Terminals\\Icon':        type => string, data =>  $reg_dir_terminals_icon }
-      registry_value { 'HKCR\\Directory\\Background\\shell\\Terminals\\SubCommands': type => string, data => $reg_dir_terminals }
-      registry_key   { 'HKCR\\Directory\\shell\\Terminals':                          ensure => present }
-      registry_value { 'HKCR\\Directory\\shell\\Terminals\\Icon':                    type => string, data =>  $reg_dir_terminals_icon }
-      registry_value { 'HKCR\\Directory\\shell\\Terminals\\SubCommands':             type => string, data => $reg_dir_terminals }
-
-      registry_key   { 'HKCR\\Drive\\Background\\shell\\Terminals':              ensure => present }
-      registry_value { 'HKCR\\Drive\\Background\\shell\\Terminals\\Icon':        type => string, data =>  $reg_dir_terminals_icon }
-      registry_value { 'HKCR\\Drive\\Background\\shell\\Terminals\\SubCommands': type => string, data => $reg_dir_terminals }
-      registry_key   { 'HKCR\\Drive\\shell\\Terminals':                          ensure => present }
-      registry_value { 'HKCR\\Drive\\shell\\Terminals\\Icon':                    type => string, data =>  $reg_dir_terminals_icon }
-      registry_value { 'HKCR\\Drive\\shell\\Terminals\\SubCommands':             type => string, data => $reg_dir_terminals }
-
+      registry_key   { [
+          'HKCR\\Directory\\Background\\shell\\Terminals',
+          'HKCR\\Directory\\shell\\Terminals',
+          'HKCR\\Drive\\Background\\shell\\Terminals',
+          'HKCR\\Drive\\shell\\Terminals'
+        ]: ensure => present }
+      registry_value { [
+          'HKCR\\Directory\\Background\\shell\\Terminals\\Icon',
+          'HKCR\\Directory\\shell\\Terminals\\Icon',
+          'HKCR\\Drive\\Background\\shell\\Terminals\\Icon',
+          'HKCR\\Drive\\shell\\Terminals\\Icon'
+        ]: type => string, data =>  'imageres.dll,-5323' }
+      registry_value { [
+          'HKCR\\Directory\\Background\\shell\\Terminals\\SubCommands',
+          'HKCR\\Directory\\shell\\Terminals\\SubCommands',
+          'HKCR\\Drive\\Background\\shell\\Terminals\\SubCommands',
+          'HKCR\\Drive\\shell\\Terminals\\SubCommands'
+        ]: type => string, data => 'Windows.MultiVerb.cmd;Windows.MultiVerb.cmdPromptAsAdministrator;|;Windows.MultiVerb.Powershell;Windows.MultiVerb.PowershellAsAdmin' }
 
 
       # for powershell scripts (*.ps1): add 'Run as administrator' to context menu
       registry_key   { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command':      ensure => present }
-      registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\HasLUAShield': ensure => present, data => '' }
+      registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\HasLUAShield': ensure => present }
       registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\MUIVerb':      ensure => present, data => '@shell32.dll,-37448' }
       registry_value { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command\\':
         ensure => present,
@@ -452,9 +462,7 @@ node default {
       }
     }
 
-    ###########################################################################
-    ########## File/Directory icons ###########################################
-    ###########################################################################
+    
     $icons = 'C:\\Windows\\Icons.puppet'
     file { $icons:
       ensure             => present,
@@ -464,10 +472,7 @@ node default {
       purge              => true,
     }
 
-
-
     ## archives ##
-
     $icons_archives = "${icons}\\7_zip_filetype_theme___windows_10_by_masamunecyrus-d93yxyk"
     reg_ensure_archive_ext {
         '001' : icondirectory => $icons_archives;
@@ -477,8 +482,6 @@ node default {
         'rar' : icondirectory => $icons_archives;
         'tar' : icondirectory => $icons_archives;
     }
-
-
 
     ## graphics ##
     package { 'svg-explorer-extension': ensure => present }
@@ -496,86 +499,17 @@ node default {
       # NOTE: https://www.windows-faq.de/2017/12/27/papierkorb-symbol-nicht-auf-dem-desktop-anzeigen/ 
 
       $recyclebin_icons_reg = "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}\\DefaultIcon"
-      registry_value { "${recyclebin_icons_reg}\\": ensure => present, type => string, data => "${icons}\\recycle-bin-full.ico,0" }
+      registry_value { [
+        "${recyclebin_icons_reg}\\",
+        "${recyclebin_icons_reg}\\full"
+        ]: ensure => present, type => string, data => "${icons}\\recycle-bin-full.ico,0" }
       registry_value { "${recyclebin_icons_reg}\\empty": ensure => present, type => string, data => "${icons}\\recycle-bin-empty.ico,0" }
-      registry_value { "${recyclebin_icons_reg}\\full": ensure => present, type => string, data => "${icons}\\recycle-bin-full.ico,0" }
 
       registry_key   { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present }
       # set to zero (disabled), because of issues with customized icons
       registry_value { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
         type => dword, data => 0x00000000 }
     }
-
-    ###########################################################################
-    ########## This PC tweaks #################################################
-    ###########################################################################
-
-    $regkey_hklm_sw_x86 = 'HKLM\\SOFTWARE'
-    $regkey_hklm_sw_x64 = 'HKLM\\SOFTWARE\\Wow6432Node'
-    $regsubkey_mycomputer_ns = '\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace'
-
-    if $is_my_user {
-      # Windows Explorer start to This PC
-      registry_value {
-        "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo":
-        type => dword, data => 0x00000001 }
-
-      # how to hide element in 'This PC': http://www.thewindowsclub.com/remove-the-folders-from-this-pc-windows-10
-      $regkeyFolderDesc = 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FolderDescriptions'
-      # hide 'Documents' in 'This PC'
-      registry_value { "${regkeyFolderDesc}\\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\\PropertyBag\\ThisPCPolicy":
-        ensure => present, type => string, data => 'Hide' }
-      # hide 'Pictures' in 'This PC'
-      registry_value { "${regkeyFolderDesc}\\{0ddd015d-b06c-45d5-8c4c-f59713854639}\\PropertyBag\\ThisPCPolicy":
-        ensure => present, type => string, data => 'Hide' }
-      # hide 'Videos' in 'This PC'
-      registry_value { "${regkeyFolderDesc}\\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\\PropertyBag\\ThisPCPolicy":
-        ensure => present, type => string, data => 'Hide' }
-
-      # remove '3D objects'
-      registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}": ensure => absent }
-      registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}": ensure => absent }
-
-    }
-
-    # ensure 'Recycling Bin'
-    registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{645FF040-5081-101B-9F08-00AA002F954E}": ensure => present }
-    registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{645FF040-5081-101B-9F08-00AA002F954E}": ensure => present }
-
-    # ensure 'Desktop'
-    registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}": ensure => present }
-    registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}": ensure => present }
-
-    # ensure 'Downloads'
-    registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{374DE290-123F-4565-9164-39C4925E467B}": ensure => present }
-    registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{374DE290-123F-4565-9164-39C4925E467B}": ensure => present }
-
-    # ensure 'Music'
-    registry_key { "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}\\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}": ensure => present }
-    registry_key { "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}\\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}": ensure => present }
-
-
-################################################################################
-#                                # RELOCATE SHELL/LIBRARY FOLDERS #	       #
-################################################################################
-#RELOCATE SHELL FOLDERS TO NEW DRIVE PARTITION: COOKIES | SENDTO | DOCS | FAVS | PICS | MUSIC | VIDEO | TIF | DOWNLOAD | TEMPLATES
-#http://www.tweakhound.com/2013/10/22/tweaking-windows-8-1/5/
-#[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders]
-#"SendTo"="X:\\OFF_SYSTEMDRIVE\\XtremeSend2\\SendTo"
-#"Personal"="X:\\OFF_SYSTEMDRIVE\\DOCS"
-#"Favorites"="X:\\OFF_SYSTEMDRIVE\\Favs"
-#"My Pictures"="X:\\OFF_SYSTEMDRIVE\\Pics"
-#"My Music"="X:\\OFF_SYSTEMDRIVE\\Music"
-#COPY AND PASTE HEX VALUIE FOR DOWNLOAD SHELL FOLDER {374DE290-123F-4565-9164-39C4925E467B}
-#"{374DE290-123F-4565-9164-39C4925E467B}"=hex(2):46,00,3a,00,5c,00,57,00,50,00,\
-#  49,00,5c,00,49,00,6e,00,73,00,74,00,61,00,6c,00,6c,00,5c,00,31,00,44,00,6f,\
-#  00,77,00,6e,00,6c,00,6f,00,61,00,64,00,73,00,00,00
-#"Templates"=hex(2):46,00,3a,00,5c,00,31,00,48,00,4f,00,4d,00,45,00,5c,00,44,00,\
-#  4f,00,43,00,53,00,5c,00,54,00,65,00,6d,00,70,00,6c,00,61,00,74,00,65,00,00,\
-#00
-    ###########################################################################
-    ########## File explorer tweaks ###########################################
-    ###########################################################################
 
     if $is_dev_pc {
       #take ownership context entry
@@ -613,13 +547,14 @@ node default {
       # add quick merge to context menu of reg-files
       registry_key   { 'HKCR\\regfile\\shell\\quickmerge\\command': ensure => present }
       registry_value { 'HKCR\\regfile\\shell\\quickmerge\\': ensure => present, type => string, data => 'Zusammenführen (Ohne Bestätigung)' }
-      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\Extended': ensure => absent, type => string, data => '' }
-      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\NeverDefault': ensure => present, type => string, data => '' }
+      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\Extended': ensure => absent, type => string}
+      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\NeverDefault': ensure => present, type => string }
       registry_value { 'HKCR\\regfile\\shell\\quickmerge\\command\\': ensure => present, type => string, data => 'regedit.exe /s "%1"' }
 
       # add 'Restart Explorer' to context menu of desktop
       registry_key   { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\command': ensure => present }
-      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\': ensure => present, type => string, data => 'Explorer neustarten' }
+      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\': ensure => present, type => string, data => 'Restart Explorer' }
+      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\MUIVerb': ensure => present, type => string, data => 'Restart Explorer' }
       registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\icon': ensure => present, type => string, data => 'explorer.exe' }
       registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\command\\': ensure => present, type => string, data => 'TSKILL EXPLORER' }
     }
@@ -630,7 +565,8 @@ node default {
         ensure => present, type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
 
       # Hide_Message_-_“Es_konnten_nicht_alle_Netzlaufwerke_wiederhergestellt_werden”
-      registry_value { 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\NetworkProvider\\RestoreConnection': ensure => present, type => dword, data => '0x00000000' }
+      registry_value { 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\NetworkProvider\\RestoreConnection': 
+        ensure => present, type => dword, data => '0x00000000' }
 
       # remove 'Add to library' from context menu
       registry_key   { 'HKCR\\Folder\\ShellEx\\ContextMenuHandlers\\Library Location': ensure => absent }
@@ -655,14 +591,84 @@ node default {
       # registry_value { 'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\link': ensure => present, type => binary, data => '00 00 00 00' }
       # backup: data => '1e 00 00 00'
 
-      # remove folders from This PC
+     }
+
+    ###########################################################################
+    ########## This PC tweaks #################################################
+    ###########################################################################
+
+
+    package { 'taskbar-winconfig':
+      ensure          => present,
+      install_options => ['--params', '"\'/LOCKED:yes', '/COMBINED:yes', '/PEOPLE:no', '/TASKVIEW:no', '/STORE:no', '/CORTANA:no\'"'],
+    }
+
+    $regkey_hklm_sw_x86 = 'HKLM\\SOFTWARE'
+    $regkey_hklm_sw_x64 = 'HKLM\\SOFTWARE\\Wow6432Node'
+    $regsubkey_mycomputer_ns = '\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace'
+    $regsubkey_mycomputer_ns_x86 = "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}"
+    $regsubkey_mycomputer_ns_x64 = "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}"
+
+    if $is_my_user {
+      # remove folders from desktop
       # https://chocolatey.org/packages/desktopicons-winconfig
-      package { 'taskbar-winconfig':
+      package { 'desktopicons-winconfig':
         ensure          => present,
-        install_options => ['--params', '"\'/LOCKED:yes', '/COMBINED:yes', '/PEOPLE:no', '/TASKVIEW:no', '/STORE:no', '/CORTANA:no\'"'],
+        install_options => ['--params', '"/AllIcons:NO"'],
       }
 
+      # Windows Explorer start to This PC
+      registry_value {
+        "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo":
+        type => dword, data => 0x00000001 }
+
+      # how to hide element in 'This PC': http://www.thewindowsclub.com/remove-the-folders-from-this-pc-windows-10
+      $regkey_folder_desc = 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FolderDescriptions'
+      registry_value { [
+          "${regkey_folder_desc}\\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\\PropertyBag\\ThisPCPolicy", # Documents
+          "${regkey_folder_desc}\\{0ddd015d-b06c-45d5-8c4c-f59713854639}\\PropertyBag\\ThisPCPolicy", # Pictures
+          "${regkey_folder_desc}\\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\\PropertyBag\\ThisPCPolicy", # Videos
+        ]: ensure => present, type => string, data => 'Hide' }
+
+      # remove '3D objects'
+      registry_key { [
+          "${regsubkey_mycomputer_ns_x86}\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}",
+          "${regsubkey_mycomputer_ns_x64}\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}"
+        ]: ensure => absent }
     }
+
+    # ensure elements at 'This PC'
+    registry_key { [
+        "${regsubkey_mycomputer_ns_x86}\\{645FF040-5081-101B-9F08-00AA002F954E}", # ensure 'Recycling Bin' x86
+        "${regsubkey_mycomputer_ns_x64}\\{645FF040-5081-101B-9F08-00AA002F954E}", # ensure 'Recycling Bin' x64
+        "${regsubkey_mycomputer_ns_x86}\\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}", # ensure 'Desktop' x86
+        "${regsubkey_mycomputer_ns_x64}\\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}", # ensure 'Desktop' x64
+        "${regsubkey_mycomputer_ns_x86}\\{374DE290-123F-4565-9164-39C4925E467B}", # ensure 'Downloads' x86
+        "${regsubkey_mycomputer_ns_x64}\\{374DE290-123F-4565-9164-39C4925E467B}", # ensure 'Downloads' x64
+        "${regsubkey_mycomputer_ns_x86}\\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}", # ensure 'Music' x86
+        "${regsubkey_mycomputer_ns_x64}\\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}", # ensure 'Music' x64
+      ]: ensure => present }
+
+
+    ################################################################################
+    #                                # RELOCATE SHELL/LIBRARY FOLDERS #	       #
+    ################################################################################
+    #RELOCATE SHELL FOLDERS TO NEW DRIVE PARTITION: COOKIES | SENDTO | DOCS | FAVS | PICS | MUSIC | VIDEO | TIF | DOWNLOAD | TEMPLATES
+    #http://www.tweakhound.com/2013/10/22/tweaking-windows-8-1/5/
+    #[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders]
+    #"SendTo"="X:\\OFF_SYSTEMDRIVE\\XtremeSend2\\SendTo"
+    #"Personal"="X:\\OFF_SYSTEMDRIVE\\DOCS"
+    #"Favorites"="X:\\OFF_SYSTEMDRIVE\\Favs"
+    #"My Pictures"="X:\\OFF_SYSTEMDRIVE\\Pics"
+    #"My Music"="X:\\OFF_SYSTEMDRIVE\\Music"
+    #COPY AND PASTE HEX VALUIE FOR DOWNLOAD SHELL FOLDER {374DE290-123F-4565-9164-39C4925E467B}
+    #"{374DE290-123F-4565-9164-39C4925E467B}"=hex(2):46,00,3a,00,5c,00,57,00,50,00,\
+    #  49,00,5c,00,49,00,6e,00,73,00,74,00,61,00,6c,00,6c,00,5c,00,31,00,44,00,6f,\
+    #  00,77,00,6e,00,6c,00,6f,00,61,00,64,00,73,00,00,00
+    #"Templates"=hex(2):46,00,3a,00,5c,00,31,00,48,00,4f,00,4d,00,45,00,5c,00,44,00,\
+    #  4f,00,43,00,53,00,5c,00,54,00,65,00,6d,00,70,00,6c,00,61,00,74,00,65,00,00,\
+    #00
+
 
     ###########################################################################
     ########## Regedit tweaks ###########################################
@@ -703,15 +709,20 @@ node default {
     ###############################################################################
     #http://www.eightforums.com/tutorials/40512-register-unregister-context-menu-dll-ocx-files.html
     if $is_dev_pc {
-      registry_key   { 'HKEY_CLASSES_ROOT\\dllfile\\shell\\Register\\command': ensure => present }
-      registry_value   { 'HKEY_CLASSES_ROOT\\dllfile\\shell\\Register\\command': type => string, data => 'regsvr32.exe "%L"' }
-      registry_key   { 'HKEY_CLASSES_ROOT\\dllfile\\shell\\Unregister\\command': ensure => present }
-      registry_value   { 'HKEY_CLASSES_ROOT\\dllfile\\shell\\Unregister\\command': type => string, data => 'regsvr32.exe /u %L' }
-
-      registry_key   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Register\\command': ensure => present }
-      registry_value   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Register\\command': type => string, data => 'regsvr32.exe "%L"' }
-      registry_key   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Unregister\\command': ensure => present }
-      registry_value   { 'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Unregister\\command': type => string, data => 'regsvr32.exe /u %L' }
+      registry_key   { [
+          'HKEY_CLASSES_ROOT\\dllfile\\shell\\Register\\command',
+          'HKEY_CLASSES_ROOT\\dllfile\\shell\\Unregister\\command',
+          'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Register\\command',
+          'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Unregister\\command',
+        ]: ensure => present }
+      registry_value   { [
+          'HKEY_CLASSES_ROOT\\dllfile\\shell\\Register\\command',
+          'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Register\\command',
+        ]: type => string, data => 'regsvr32.exe "%L"' }
+      registry_value   { [
+          'HKEY_CLASSES_ROOT\\dllfile\\shell\\Unregister\\command',
+          'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Unregister\\command',
+        ]: type => string, data => 'regsvr32.exe /u %L' }
     }
   }
 }
