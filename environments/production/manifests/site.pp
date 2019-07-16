@@ -1,24 +1,24 @@
 define reg_ensure_file_ext(String $display_name, String $icon) {
   registry_key   { "HKCR\\${name}file": ensure => present }
-  registry_value { "HKCR\\${name}file\\": type => string, data => $display_name }
+  registry_value { "HKCR\\${name}file\\": data => $display_name }
   registry_key   { "HKCR\\${name}file\\defaulticon": ensure => present }
-  registry_value { "HKCR\\${name}file\\defaulticon\\": type => string, data => $icon }
+  registry_value { "HKCR\\${name}file\\defaulticon\\": data => $icon }
   registry_key   { "HKCR\\${name}file\\shell": ensure => present }
   registry_key   { "HKCR\\.${name}": ensure => present }
-  registry_value { "HKCR\\.${name}\\": type => string, data => "${name}file" }
+  registry_value { "HKCR\\.${name}\\": data => "${name}file" }
 }
 
 define reg_ensure_file_ext_value(String $value) {
-  registry_value { "HKCR\\.${name}": type => string, data => $value }
+  registry_value { "HKCR\\.${name}": data => $value }
 }
 
 define reg_ensure_archive_ext(String $icondirectory) {
   reg_ensure_file_ext { $name: display_name => "${name} Archive", icon => "${icondirectory}\\${name}.ico" }
   registry_key   { "HKCR\\${name}file\\shell\\open\\command": ensure => present }
-  registry_value { "HKCR\\${name}file\\shell\\": type => string, data => 'open' }
-  registry_value { "HKCR\\${name}file\\shell\\open\\command\\": type => string, data => '"C:\\Program Files\\7-Zip\\7zFM.exe" "%1"' }
-  registry_value { "HKCR\\${name}file\\shell\\open\\Icon": type => string, data => '"C:\\Program Files\\7-Zip\\7zFM.exe"' }
-  registry_value { "HKCR\\.${name}\\PerceivedType": type => string, data => 'compressed' }
+  registry_value { "HKCR\\${name}file\\shell\\": data => 'open' }
+  registry_value { "HKCR\\${name}file\\shell\\open\\command\\": data => '"C:\\Program Files\\7-Zip\\7zFM.exe" "%1"' }
+  registry_value { "HKCR\\${name}file\\shell\\open\\Icon": data => '"C:\\Program Files\\7-Zip\\7zFM.exe"' }
+  registry_value { "HKCR\\.${name}\\PerceivedType": data => 'compressed' }
 }
 
 node default {
@@ -116,7 +116,7 @@ node default {
         'HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
         'HKEY_CLASSES_ROOT\\Drive\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
       ] : ensure => absent, require => Package['bulkrenameutility'] }
-    #registry_value {"HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler\\": type => string, data => '{5D924130-4CB1-11DB-B0DE-0800200C9A66}'}
+    #registry_value {"HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler\\": \\ data => '{5D924130-4CB1-11DB-B0DE-0800200C9A66}'}
 
 
     ###########################################################################
@@ -128,7 +128,7 @@ node default {
       registry_value { [
           'HKCR\\Directory\\shell\\AddToPlaylistVLC\\LegacyDisable',
           'HKCR\\Directory\\shell\\PlayWithVLC\\LegacyDisable'
-        ]: ensure => present, type => string, require => Package['vlc'] }
+        ]: ensure => present, data => '', require => Package['vlc'] }
     }
 
     package { 'sketchup': ensure => latest }  # sketchup 2017, last free version
@@ -178,10 +178,10 @@ node default {
           'HKCR\\SystemFileAssociations\\audio\\shell\\Play\\LegacyDisable',
           #'HKCR\\SystemFileAssociations\\video\\shell\\Enqueue\\LegacyDisable',
           #'HKCR\\SystemFileAssociations\\video\\shell\\Play\\LegacyDisable',
-        ]: ensure => present, type => string }
+        ]: ensure => present, data => '' }
       registry_key { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo': ensure => absent }
       #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo\\': 
-        #ensure => absent, type => string, data => '{7AD84985-87B4-4a16-BE58-8B72A5B390F7}' }
+        #ensure => absent, data => '{7AD84985-87B4-4a16-BE58-8B72A5B390F7}' }
     }
 
     ###########################################################################
@@ -190,32 +190,32 @@ node default {
     package { 'inkscape': ensure => latest }
     $inkscape = "C:\\Program Files\\inkscape\\inkscape.exe"
     registry_key   {'HKCR\\Applications\\inkscape.exe\\shell\\open\\command': ensure => present}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\command\\': type => string, data => "\"${inkscape}\", \"%1\""}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\icon': type => string, data => "\"${inkscape}\", 0"}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\command\\': data => "\"${inkscape}\", \"%1\""}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\icon': data => "\"${inkscape}\", 0"}
 
     registry_key {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu': ensure => present}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu\\ExtendedSubCommandsKey': type => string, data => 'Applications\\inkscape.exe\\ContextMenus\\converters'}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu\\': type => string, data => 'Convert'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu\\ExtendedSubCommandsKey': data => 'Applications\\inkscape.exe\\ContextMenus\\converters'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu\\': data => 'Convert'}
 
     registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\command': ensure => present}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\icon': type => string, data => "\"${inkscape}\", 0"}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\': type => string, data => 'Convert to PNG'}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\command\\': type => string, data => "\"${inkscape}\" -z \"%1\" -e \"%1.png\""}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\icon': data => "\"${inkscape}\", 0"}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\': data => 'Convert to PNG'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\command\\': data => "\"${inkscape}\" -z \"%1\" -e \"%1.png\""}
 
     registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\command': ensure => present}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\icon': type => string, data => "\"${inkscape}\", 0"}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\': type => string, data => 'Convert to PS'}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\command\\': type => string, data => "\"${inkscape}\" -z \"%1\" -P \"%1.ps\""}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\icon': data => "\"${inkscape}\", 0"}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\': data => 'Convert to PS'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\command\\': data => "\"${inkscape}\" -z \"%1\" -P \"%1.ps\""}
 
     registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\command': ensure => present}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\icon': type => string, data => "\"${inkscape}\", 0"}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\': type => string, data => 'Convert to EPS'}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\command\\': type => string, data => "\"${inkscape}\" -z \"%1\" -E \"%1.eps\""}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\icon': data => "\"${inkscape}\", 0"}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\': data => 'Convert to EPS'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\command\\': data => "\"${inkscape}\" -z \"%1\" -E \"%1.eps\""}
 
     registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\command': ensure => present}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\icon': type => string, data => "\"${inkscape}\", 0"}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\': type => string, data => 'Convert to PDF'}
-    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\command\\': type => string, data => "\"${inkscape}\" -z \"%1\" -A \"%1.pdf\""}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\icon': data => "\"${inkscape}\", 0"}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\': data => 'Convert to PDF'}
+    registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\command\\': data => "\"${inkscape}\" -z \"%1\" -A \"%1.pdf\""}
 
 
 
@@ -228,8 +228,8 @@ node default {
 
     # change *.txt file association
     registry_key   {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice": ensure => present}
-    registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\Hash": type => string, data => 'hK1YV2FCtgs='}
-    registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\ProgId": type => string, data => 'Applications\\code.exe'}
+    registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\Hash": data => 'hK1YV2FCtgs='}
+    registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\ProgId": data => 'Applications\\code.exe'}
 
     $notepad_replace_helperdir = 'C:\\ProgramData\\NotepadReplacer'
     $notepad_replace_helperlink = "${notepad_replace_helperdir}\\notepad.exe"
@@ -242,13 +242,13 @@ node default {
       install_options => ['-installarguments', "\"/notepad=${notepad_replace_helperlink}", '/verysilent"'],
     }
 
-    registry_value {'HKCR\\SystemFileAssociations\\text\\shell\\open\\icon': type => string, data => $notepad_replace_helperlink}
-    registry_value {'HKCR\\SystemFileAssociations\\text\\shell\\edit\\LegacyDisable': type => string, data => ''}
+    registry_value {'HKCR\\SystemFileAssociations\\text\\shell\\open\\icon': data => $notepad_replace_helperlink}
+    registry_value {'HKCR\\SystemFileAssociations\\text\\shell\\edit\\LegacyDisable': data => ''}
 
     #comment code, because of changed 'Open With' setting above for *.txt files
-    #registry_value {'HKCR\\txtfile\\shell\\open\\icon': type => string, data => $notepad_replace_helperlink}
-    #registry_value {'HKCR\\txtfile\\shell\\print\\LegacyDisable': type => string, data => ''}
-    #registry_value {'HKCR\\txtfile\\shell\\printto\\LegacyDisable': type => string, data => ''}
+    #registry_value {'HKCR\\txtfile\\shell\\open\\icon': data => $notepad_replace_helperlink}
+    #registry_value {'HKCR\\txtfile\\shell\\print\\LegacyDisable': data => ''}
+    #registry_value {'HKCR\\txtfile\\shell\\printto\\LegacyDisable': data => ''}
 
 
 
@@ -293,7 +293,7 @@ node default {
         'HKCR\\Directory\\shell\\git_shell\\LegacyDisable',
         'HKCR\\Directory\\Background\\shell\\git_gui\\LegacyDisable',
         'HKCR\\Directory\\Background\\shell\\git_shell\\LegacyDisable',
-        ]: ensure => present, type => string, require => Package['git'] }
+        ]: ensure => present, data => '', require => Package['git'] }
 
       # installing tortoisegit can fail if non-package-version is installed
       # 'tortoisegit': ensure => latest is causing errors
@@ -384,8 +384,8 @@ node default {
     }
 
     # not needed yet: hide 'Open with Visual Studio' in folders context menu
-    # registry_value {"HKEY_CLASSES_ROOT\\Directory\\shell\\AnyCode\\LegacyDisable": type => string, data => ''}
-    # registry_value {"HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\AnyCode\\LegacyDisable": type => string, data => ''}
+    # registry_value {"HKEY_CLASSES_ROOT\\Directory\\shell\\AnyCode\\LegacyDisable": data => ''}
+    # registry_value {"HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\AnyCode\\LegacyDisable": data => ''}
 
 
     ###########################################################################
@@ -431,6 +431,13 @@ node default {
     ###########################################################################
 
     if $is_dev_pc {
+      # Add 'Copy Path' to shift context menu
+      # Tutorial: https://www.tenforums.com/tutorials/73649-copy-path-add-context-menu-windows-10-a.html
+      registry_key   { 'HKCR\\AllFilesystemObjects\\shellex\\ContextMenuHandlers\\CopyAsPathMenu': ensure => present }
+      registry_value { 'HKCR\\AllFilesystemObjects\\shellex\\ContextMenuHandlers\\CopyAsPathMenu\\': ensure => present,
+        data => '{f3d06e7c-1e45-4a26-847e-f9fcdee59be0}' }
+
+
       #add 'command prompt' and powershell to context menu of folders and drives
       registry_key   { [
           'HKCR\\Directory\\Background\\shell\\Terminals',
@@ -443,13 +450,13 @@ node default {
           'HKCR\\Directory\\shell\\Terminals\\Icon',
           'HKCR\\Drive\\Background\\shell\\Terminals\\Icon',
           'HKCR\\Drive\\shell\\Terminals\\Icon'
-        ]: type => string, data =>  'imageres.dll,-5323' }
+        ]: data => 'imageres.dll,-5323' }
       registry_value { [
           'HKCR\\Directory\\Background\\shell\\Terminals\\SubCommands',
           'HKCR\\Directory\\shell\\Terminals\\SubCommands',
           'HKCR\\Drive\\Background\\shell\\Terminals\\SubCommands',
           'HKCR\\Drive\\shell\\Terminals\\SubCommands'
-        ]: type => string, data => 'Windows.MultiVerb.cmd;Windows.MultiVerb.cmdPromptAsAdministrator;|;Windows.MultiVerb.Powershell;Windows.MultiVerb.PowershellAsAdmin' }
+        ]: data => 'Windows.MultiVerb.cmd;Windows.MultiVerb.cmdPromptAsAdministrator;|;Windows.MultiVerb.Powershell;Windows.MultiVerb.PowershellAsAdmin' }
 
 
       # for powershell scripts (*.ps1): add 'Run as administrator' to context menu
@@ -462,7 +469,7 @@ node default {
       }
     }
 
-    
+
     $icons = 'C:\\Windows\\Icons.puppet'
     file { $icons:
       ensure             => present,
@@ -502,8 +509,8 @@ node default {
       registry_value { [
         "${recyclebin_icons_reg}\\",
         "${recyclebin_icons_reg}\\full"
-        ]: ensure => present, type => string, data => "${icons}\\recycle-bin-full.ico,0" }
-      registry_value { "${recyclebin_icons_reg}\\empty": ensure => present, type => string, data => "${icons}\\recycle-bin-empty.ico,0" }
+        ]: ensure => present, data => "${icons}\\recycle-bin-full.ico,0" }
+      registry_value { "${recyclebin_icons_reg}\\empty": ensure => present, data => "${icons}\\recycle-bin-empty.ico,0" }
 
       registry_key   { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present }
       # set to zero (disabled), because of issues with customized icons
@@ -514,30 +521,30 @@ node default {
     if $is_dev_pc {
       #take ownership context entry
       # registry_key   {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command': ensure => present}
-      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\': type => string, data => 'Take Ownership'}
-      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\NoWorkingDirectory': type => string, data => ''}
-      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command\\': type => string, data => 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'}
-      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command\\IsolatedCommand': type => string, data => 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\': data => 'Take Ownership'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\NoWorkingDirectory': data => ''}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command\\': data => 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command\\IsolatedCommand': data => 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'}
 
       # registry_key   {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command': ensure => present}
-      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\': type => string, data => 'Take Ownership'}
-      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\NoWorkingDirectory': type => string, data => ''}
-      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command\\': type => string, data => 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'}
-      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command\\IsolatedCommand': type => string, data => 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\': data => 'Take Ownership'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\NoWorkingDirectory': data => ''}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command\\': data => 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'}
+      # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command\\IsolatedCommand': data => 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'}
 
       # registry_key   {'HKCR\\*\\shell\\manage_menu': ensure => present}
-      # registry_value {'HKCR\\*\\shell\\manage_menu\\SubCommands': type => string, data => 'Windows.takeownership.files'}
-      # registry_value {'HKCR\\*\\shell\\manage_menu\\': type => string, data => 'Manage'}
-      # registry_value {'HKCR\\*\\shell\\manage_menu\\icon': type => string, data => '%SystemRoot%\\System32\\shell32.dll,-137'}
+      # registry_value {'HKCR\\*\\shell\\manage_menu\\SubCommands': data => 'Windows.takeownership.files'}
+      # registry_value {'HKCR\\*\\shell\\manage_menu\\': data => 'Manage'}
+      # registry_value {'HKCR\\*\\shell\\manage_menu\\icon': data => '%SystemRoot%\\System32\\shell32.dll,-137'}
 
       # registry_key   {'HKCR\\Directory\\shell\\manage_menu': ensure => present}
-      # registry_value {'HKCR\\Directory\\shell\\manage_menu\\SubCommands': type => string, data => 'Windows.takeownership.directories'}
-      # registry_value {'HKCR\\Directory\\shell\\manage_menu\\': type => string, data => 'Manage'}
-      # registry_value {'HKCR\\Directory\\shell\\manage_menu\\icon': type => string, data => '%SystemRoot%\\System32\\shell32.dll,-137'}
+      # registry_value {'HKCR\\Directory\\shell\\manage_menu\\SubCommands': data => 'Windows.takeownership.directories'}
+      # registry_value {'HKCR\\Directory\\shell\\manage_menu\\': data => 'Manage'}
+      # registry_value {'HKCR\\Directory\\shell\\manage_menu\\icon': data => '%SystemRoot%\\System32\\shell32.dll,-137'}
       # registry_key   {'HKCR\\Directory\\Background\\shell\\manage_menu': ensure => present}
-      # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\SubCommands': type => string, data => 'Windows.takeownership.directories'}
-      # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\': type => string, data => 'Manage'}
-      # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\icon': type => string, data => '%SystemRoot%\\System32\\shell32.dll,-137'}
+      # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\SubCommands': data => 'Windows.takeownership.directories'}
+      # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\': data => 'Manage'}
+      # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\icon': data => '%SystemRoot%\\System32\\shell32.dll,-137'}
 
 
       #enable checkboxes
@@ -546,17 +553,17 @@ node default {
 
       # add quick merge to context menu of reg-files
       registry_key   { 'HKCR\\regfile\\shell\\quickmerge\\command': ensure => present }
-      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\': ensure => present, type => string, data => 'Zusammenführen (Ohne Bestätigung)' }
-      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\Extended': ensure => absent, type => string}
-      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\NeverDefault': ensure => present, type => string }
-      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\command\\': ensure => present, type => string, data => 'regedit.exe /s "%1"' }
+      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\': ensure => present, data => 'Zusammenführen (Ohne Bestätigung)' }
+      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\Extended': ensure => absent, data => ''}
+      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\NeverDefault': ensure => present, data => '' }
+      registry_value { 'HKCR\\regfile\\shell\\quickmerge\\command\\': ensure => present, data => 'regedit.exe /s "%1"' }
 
       # add 'Restart Explorer' to context menu of desktop
       registry_key   { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\command': ensure => present }
-      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\': ensure => present, type => string, data => 'Restart Explorer' }
-      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\MUIVerb': ensure => present, type => string, data => 'Restart Explorer' }
-      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\icon': ensure => present, type => string, data => 'explorer.exe' }
-      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\command\\': ensure => present, type => string, data => 'TSKILL EXPLORER' }
+      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\': ensure => present, data => 'Restart Explorer' }
+      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\MUIVerb': ensure => present, data => 'Restart Explorer' }
+      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\icon': ensure => present, data => 'explorer.exe' }
+      registry_value { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\command\\': ensure => present, data => 'TSKILL EXPLORER' }
     }
 
     if $is_my_user {
@@ -565,13 +572,13 @@ node default {
         ensure => present, type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
 
       # Hide_Message_-_“Es_konnten_nicht_alle_Netzlaufwerke_wiederhergestellt_werden”
-      registry_value { 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\NetworkProvider\\RestoreConnection': 
+      registry_value { 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\NetworkProvider\\RestoreConnection':
         ensure => present, type => dword, data => '0x00000000' }
 
       # remove 'Add to library' from context menu
       registry_key   { 'HKCR\\Folder\\ShellEx\\ContextMenuHandlers\\Library Location': ensure => absent }
       # backup:
-      # registry_value { 'HKCR\\Folder\\ShellEx\\ContextMenuHandlers\\Library Location\\': ensure => present, type => string, data => '{3dad6c5d-2167-4cae-9914-f99e41c12cfa}' }
+      # registry_value { 'HKCR\\Folder\\ShellEx\\ContextMenuHandlers\\Library Location\\': ensure => present, data => '{3dad6c5d-2167-4cae-9914-f99e41c12cfa}' }
 
       # remove 'Scan with Windows Defender' from context menu
       registry_key   { 'HKCR\\*\\shellex\\ContextMenuHandlers\\EPP': ensure => absent }
@@ -579,8 +586,8 @@ node default {
       registry_key   { 'HKCR\\Drive\\shellex\\ContextMenuHandlers\\EPP': ensure => absent }
 
       # backup:
-      # registry_value { 'HKCR\\*\\ShellEx\\ContextMenuHandlers\\EPP\\': ensure => present, type => string, data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}' }
-      # registry_value { 'HKCR\\Directory\\ShellEx\\ContextMenuHandlers\\EPP\\': ensure => present, type => string, data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}' }
+      # registry_value { 'HKCR\\*\\ShellEx\\ContextMenuHandlers\\EPP\\': ensure => present, data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}' }
+      # registry_value { 'HKCR\\Directory\\ShellEx\\ContextMenuHandlers\\EPP\\': ensure => present, data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}' }
 
 
       # Disable AutoPlay for removable media drives for CurrentUser
@@ -594,7 +601,7 @@ node default {
      }
 
     ###########################################################################
-    ########## This PC tweaks #################################################
+    ########## This PC Tweaks #################################################
     ###########################################################################
 
 
@@ -628,7 +635,7 @@ node default {
           "${regkey_folder_desc}\\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\\PropertyBag\\ThisPCPolicy", # Documents
           "${regkey_folder_desc}\\{0ddd015d-b06c-45d5-8c4c-f59713854639}\\PropertyBag\\ThisPCPolicy", # Pictures
           "${regkey_folder_desc}\\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\\PropertyBag\\ThisPCPolicy", # Videos
-        ]: ensure => present, type => string, data => 'Hide' }
+        ]: ensure => present, data => 'Hide' }
 
       # remove '3D objects'
       registry_key { [
@@ -675,33 +682,33 @@ node default {
     ###########################################################################
     if $is_my_user {
       registry_key {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites": ensure => present}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\App Paths": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\AutoStart(System)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\AutoStart(User)": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Devices - AutorunHandlers": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AutoplayHandlers\\Handlers'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Devices - FormatMap": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Portable Devices\\FormatMap'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Environmental Vars (System)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Session Manager\\Environment'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Environmental Vars (User)": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Environment'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Explorer - My Computer: Additional Folders": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - All": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\AllFilesystemObjects'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Applications": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\Applications'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Unknown": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\Unknown'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - MIME Types": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\MIME\\Database\\Content Type'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Open with": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - PerceivedType": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\SystemFileAssociations'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Links": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\CLSID\\{00021401-0000-0000-C000-000000000046}'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Firewall Rules": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\MUICache": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Software\\Classes\\Local Settings\\MuiCache'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Network Adapters": type => string, data => 'Computer\\HKEY_CLASSES_ROOT\\CLSID\\{7007ACC7-3202-11D1-AAD2-00805FC1270E}'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Services": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Browser Helper Objects": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Browser Helper Objects'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - CommandStore (System)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - DriveIcons": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Folders (System)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Folders (User)": type => string, data => 'Computer\\HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Icons": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Icons'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - OverlayIcons(-ID)": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers'}
-      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\System Control - Members": type => string, data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Control Panel\\Extended Properties\\{305CA226-D286-468e-B848-2B2E8E697B74} 2'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\App Paths": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\AutoStart(System)": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\AutoStart(User)": data => 'Computer\\HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Devices - AutorunHandlers": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AutoplayHandlers\\Handlers'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Devices - FormatMap": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Portable Devices\\FormatMap'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Environmental Vars (System)": data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Session Manager\\Environment'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Environmental Vars (User)": data => 'Computer\\HKEY_CURRENT_USER\\Environment'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Explorer - My Computer: Additional Folders": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - All": data => 'Computer\\HKEY_CLASSES_ROOT\\AllFilesystemObjects'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Applications": data => 'Computer\\HKEY_CLASSES_ROOT\\Applications'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Unknown": data => 'Computer\\HKEY_CLASSES_ROOT\\Unknown'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - MIME Types": data => 'Computer\\HKEY_CLASSES_ROOT\\MIME\\Database\\Content Type'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Open with": data => 'Computer\\HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - PerceivedType": data => 'Computer\\HKEY_CLASSES_ROOT\\SystemFileAssociations'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\FileExts - Links": data => 'Computer\\HKEY_CLASSES_ROOT\\CLSID\\{00021401-0000-0000-C000-000000000046}'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Firewall Rules": data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\MUICache": data => 'Computer\\HKEY_CURRENT_USER\\Software\\Classes\\Local Settings\\MuiCache'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Network Adapters": data => 'Computer\\HKEY_CLASSES_ROOT\\CLSID\\{7007ACC7-3202-11D1-AAD2-00805FC1270E}'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Services": data => 'Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Browser Helper Objects": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Browser Helper Objects'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - CommandStore (System)": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - DriveIcons": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Folders (System)": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Folders (User)": data => 'Computer\\HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - Icons": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Icons'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\Shell - OverlayIcons(-ID)": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers'}
+      registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites\\System Control - Members": data => 'Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Control Panel\\Extended Properties\\{305CA226-D286-468e-B848-2B2E8E697B74} 2'}
     }
 
     ###############################################################################
@@ -718,11 +725,11 @@ node default {
       registry_value   { [
           'HKEY_CLASSES_ROOT\\dllfile\\shell\\Register\\command',
           'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Register\\command',
-        ]: type => string, data => 'regsvr32.exe "%L"' }
+        ]: data => 'regsvr32.exe "%L"' }
       registry_value   { [
           'HKEY_CLASSES_ROOT\\dllfile\\shell\\Unregister\\command',
           'HKEY_CLASSES_ROOT\\ocxfile\\shell\\Unregister\\command',
-        ]: type => string, data => 'regsvr32.exe /u %L' }
+        ]: data => 'regsvr32.exe /u %L' }
     }
   }
 }
