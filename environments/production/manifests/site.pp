@@ -26,16 +26,17 @@ node default {
   # https://forge.puppet.com/
   # https://chocolatey.org/
 
-  #include stdlib
-
   if $::kernel == 'windows' {
 
     ###########################################################################
     ########## TODO ###########################################################
     ###########################################################################
 
-    #https://stackoverflow.com/questions/24579193/how-do-i-automatically-keep-all-locally-installed-chocolatey-packages-up-to-date
-
+    # https://stackoverflow.com/questions/24579193/how-do-i-automatically-keep-all-locally-installed-chocolatey-packages-up-to-date
+    # https://chocolatey.org/packages/launchy
+    # https://chocolatey.org/packages/dropit
+    # https://chocolatey.org/packages/exiftool
+    # https://chocolatey.org/packages/sharemouse
 
 
     ###########################################################################
@@ -67,12 +68,12 @@ node default {
     if $is_my_pc {
       package { 'office365proplus': ensure => present }
     }
-
     package { 'firefox': ensure => present } #firefox have a very silent update mechanism
     package { 'EdgeDeflector': ensure => latest } #redirects URIs to the default browser (caution: menu popup)
 
 
-    class {'sevenzip': package_ensure => 'latest', package_name => ['7zip'], prerelease => false }
+    #class {'sevenzip': package_ensure => 'latest', package_name => ['7zip'], prerelease => false }
+    package { '7zip': ensure => latest }
 
     package { 'capture2text': ensure => latest } # screenshot to text
     #package { 'jcpicker': ensure => latest } # installer not working (from 20190605)
@@ -367,7 +368,11 @@ node default {
       #package { 'visualsvn': ensure => present } #to old, not working with VS2017
 
       # jetbrains
-      package { ['resharper', 'dotpeek', 'dotcover', 'dottrace', 'dotmemory']: ensure => present }
+      package { 'resharper-ultimate-all': ensure => latest }
+      #package { ['resharper', 'dotpeek', 'dotcover', 'dottrace', 'dotmemory']: ensure => present }
+
+      # spy/browse the visual tree of a running WPF application ... and change properties
+      package { 'snoop': ensure => present }
 
       if $is_my_pc {
         package { 'arduino': ensure => present }
