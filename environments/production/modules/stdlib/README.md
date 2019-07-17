@@ -323,7 +323,7 @@ true
 false
 ```
 
-#### `Stdlib::Httpsurl`
+#### `Stdlib::HTTPSUrl`
 
 Matches HTTPS URLs. It is a case insensitive match.
 
@@ -341,7 +341,7 @@ Unacceptable input example:
 httds://notquiteright.org`
 ```
 
-#### `Stdlib::Httpurl`
+#### `Stdlib::HTTPUrl`
 
 Matches both HTTPS and HTTP URLs. It is a case insensitive match.
 
@@ -1399,6 +1399,17 @@ stdlib::extname('.profile')      => ''
 
 *Type*: rvalue.
 
+#### `stdlib::ip_in_range`
+
+A Puppet function that determines whether an IPv4 address is within the IPv4 CIDR. Returns true if the ipaddress is within the given CIDRs.
+
+```puppet
+$ranges = ['192.168.0.0/24', '10.10.10.0/24']
+$valid_ip = stdlib::ip_in_range('10.10.10.53', $ranges) # $valid_ip == true
+```
+
+*Type*: rvalue.
+
 #### `fact`
 
 Return the value of a given fact. Supports the use of dot-notation for referring to structured facts. If a fact requested does not exist, returns Undef.
@@ -1985,6 +1996,33 @@ When there is a duplicate key, the key in the rightmost hash takes precedence.
 Since Puppet 4.0.0, you can use the + operator to achieve the same merge.
 
     $merged_hash = $hash1 + $hash2
+
+If merge is given a single `Iterable` (`Array`, `Hash`, etc.), it calls a block with
+up to three parameters, and merges each resulting Hash into the accumulated result. All other types
+of values returned from the block (for example, `undef`) are skipped, not merged.
+
+The codeblock takes two or three parameters:
+* With two parameters, the codeblock gets the current hash and each value (for hash the value is a [key, value] tuple).
+* With three parameters, the codeblock gets the current hash, the key/index of each value, and the value.
+
+If the iterable is empty, or if no hash was returned from the given block, an empty hash is returned. A call to `next()` skips that entry, and a call to `break()` ends the iteration.
+
+Counting occurrences of strings in an array example:
+
+```puppet
+['a', 'b', 'c', 'c', 'd', 'b'].merge | $hsh, $v | { { $v => $hsh[$v].lest || { 0 } + 1 } }
+# would result in { a => 1, b => 2, c => 2, d => 1 }
+```
+
+Skipping values for entries that are longer than one char example:
+
+```puppet
+['a', 'b', 'c', 'c', 'd', 'b', 'blah', 'blah'].merge | $hsh, $v | { if $v =~ String[1,1] { { $v => $hsh[$v].lest || { 0 } + 1 } } }
+# would result in { a => 1, b => 2, c => 2, d => 1 } since 'blah' is longer than 2 chars
+```
+
+The iterative `merge()` has an advantage over a general `reduce()` in that the constructed hash
+does not have to be copied in each iteration and it performs better with large inputs.
 
 *Type*: rvalue.
 
