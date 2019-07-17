@@ -38,6 +38,13 @@ node default {
     # https://chocolatey.org/packages/exiftool
     # https://chocolatey.org/packages/sharemouse
 
+    # https://github.com/puppetlabs/puppetlabs-windows
+    
+    # driver update cycles using SDIO and toast notifications
+    # http://snappy-driver-installer.sourceforge.net/en/usage.php
+    # -checkupdates -reindex -autoinstall -nogui
+    # https://www.powershellgallery.com/packages/BurntToast/0.7.0
+
 
     ###########################################################################
     ########## Configuration ##################################################
