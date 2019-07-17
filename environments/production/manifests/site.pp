@@ -44,7 +44,8 @@ node default {
     ###########################################################################
 
     $username = $identity['user']
-    $hkcu = "HKU\\${identity2['sid']}"
+    $hkcu = "HKU\\${identity_win['sid']}"
+    $localappdata = $identity_win['localappdata']
 
     $is_my_pc   = 'borck' in downcase($hostname)
     $is_at_pc   = $hostname =~ /^AT\d+$/
@@ -434,6 +435,12 @@ node default {
     ###########################################################################
     ########## File Explorer Tweaks ###########################################
     ###########################################################################
+
+    #TODO install for all users instead of only current user
+    package { 'quicklook': ensure => latest }
+    registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\QuickLook": 
+      data => "\"${localappdata}\\Programs\\QuickLook\\QuickLook.exe\" /autorun"}
+
 
     if $is_dev_pc {
       #add 'command prompt' and powershell to context menu of folders and drives
