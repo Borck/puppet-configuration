@@ -1,6 +1,11 @@
 param (
-    [alias('d')]   [switch] $debug,
-    [alias('swu')] [siwtch] $skipWindowsUpdate
+    [alias('d')]
+    [switch] $debug,
+
+    [alias('i')]
+    #[parameter(Mandatory=$false)]
+    [ValidateSet('Upgrade', 'Install', 'Minimal')]
+    [String] $install = 'Upgrade'
 );
 
 Set-Location $PSScriptRoot
@@ -8,24 +13,41 @@ Set-Location $PSScriptRoot
 
 EnsureAdmin
 
-Write-Host "Set up  basic software"
 
-EnsureChocoPackage pswindowsupdate
+Write-Host "#################################"
+Write-Host "######## Set up system ##########"
+Write-Host "#################################"
+Write-Host ""
+Write-Host "This script may install a lots of software, which can take a while ..."
+Write-Host "Mode: $install"
+Write-Host ""
 
-
-EnsureChocoPackage puppet-agent
-
-
-if(-Not($skipWindowsUpdate)){
-  #update windows
-  choco upgrade pswindowsupdate -y
+if($install -eq 'Upgrade'){
+  EnsureChoco
+  
+  Write-Host "Update windows"
+  UpgradeChocoPackage pswindowsupdate
   Get-WUInstall
+  
+  Write-Host "Upgrade required software"
+  UpgradeChocoPackage puppet-agent
+} elseif ($install -eq 'Install') {
+  EnsureChoco
+  
+  Write-Host "Install required software"
+  EnsureChocoPackage puppet-agent
 }
 
-#install puppet agent
-choco upgrade puppet-agent -y
 
-$argsJoined = $args -join ' '
-. ./setup_site_pp_only.ps1 $argsJoined
+$puppetCmd = "puppet apply --modulepath=$PSScriptRoot/environments/production/modules"
+if ($debug) {
+  $puppetCmd += " --debug"          
+}
+$puppetCmd += " $PSScriptRoot/environments/production/manifests/site.pp"          
+
+Write-Host "Run puppet setup"
+Write-Host $puppetCmd
+
+Invoke-Expression "& $puppetCmd"
 
 #WaitForAnyKey

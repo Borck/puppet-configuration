@@ -38,11 +38,17 @@ function EnsureChoco() {
 }
 
 function EnsureChocoPackage($packageName){
-  EnsureChoco
-  choco install $packageName -y
+   if ($debug) {
+      choco install $packageName -y --debug
+   } else {
+      choco install $packageName -y
+   }
 }
 
 function UpgradeChocoPackage($packageName){
-  EnsureChoco
-  choco upgrade $packageName -y
+  if ($debug) {
+      choco upgrade $packageName -y --debug
+   } else {
+      choco upgrade $packageName -y
+   }
 }

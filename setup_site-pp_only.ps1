@@ -1,22 +1,4 @@
-param (
-    [alias('d')] [switch] $debug
-);
+$argsJoined = $args -join ' '
+$argsJoined += ' -install Minimal'
 
-Set-Location $PSScriptRoot
-. .\scripts\functions.ps1
-
-EnsureAdmin
-EnsureChocoPackage puppet-agent
-
-
-#run puppet setup script
-$puppetArg = "--modulepath=$PSScriptRoot/environments/production/modules"
-if ($debug) {
-   $puppetArg += " --debug"          
-}
-$puppetArg += " $PSScriptRoot/environments/production/manifests/site.pp"          
-
-puppet apply $puppetArg
-
-
-#WaitForAnyKey
+Invoke-Expression "& `"$PSScriptRoot\setup.ps1`" $argsJoined"
