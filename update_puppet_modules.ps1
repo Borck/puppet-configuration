@@ -1,20 +1,8 @@
-# param (
-#     [switch]$d,
-#     [switch]$debug
-# );
-
-Set-Location $PSScriptRoot
-. .\scripts\functions.ps1
-
-$ppModulePath = "$($PSScriptRoot)\environments\production\modules"
+$ppModulePath = "`"$PSScriptRoot\environments\production\modules`""
 
 function puppetUpgradeModule($moduleName){
    puppet module upgrade $moduleName --force --modulepath $ppModulePath   
 }
-
-
-#EnsureAdmin
-#EnsureChocoPackage puppet-agent
 
 
 puppetUpgradeModule puppetlabs-chocolatey
@@ -25,4 +13,5 @@ puppetUpgradeModule puppetlabs-stdlib
 puppetUpgradeModule badgerious-windows_env
 puppetUpgradeModule liamjbennett-win_facts
 
-#WaitForAnyKey
+puppetUpgradeModule ianoberst-xml_fragment
+puppetUpgradeModule puppetlabs-inifile

@@ -1,0 +1,11 @@
+{
+  "CHANGELOG.md": "fcb40543756177a4f16bfc3ac58ea004",
+  "Gemfile": "def5afa5414b97d4cf2cb2f224d86783",
+  "README.md": "c3765c192e6574c3808b8380ac93eb9c",
+  "Rakefile": "add253a93bee6b9bfb9422f607f873b9",
+  "examples/test.pp": "442f31c7c6ac1efe926cd9970e0311fb",
+  "lib/puppet/provider/xml_fragment/xml_fragment.rb": "3151a3b0c16c02a87eea80ca43da4489",
+  "lib/puppet/type/xml_fragment.rb": "0f8baa31b75df7e5069a522a48ced8c4",
+  "lib/puppet/util/xml_file.rb": "a446f47f6a7592e039480dc6e70789e4",
+  "metadata.json": "5ac156ae5832bfa1058be4e60617b76f"
+}
