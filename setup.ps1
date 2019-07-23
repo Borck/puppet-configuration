@@ -39,11 +39,11 @@ if($install -eq 'Upgrade'){
 }
 
 
-$puppetCmd = "puppet apply --modulepath=$PSScriptRoot/environments/production/modules"
+$puppetCmd = "puppet apply --modulepath=`"$PSScriptRoot/environments/production/modules`""
 if ($debug) {
   $puppetCmd += " --debug"          
 }
-$puppetCmd += " $PSScriptRoot/environments/production/manifests/site.pp"          
+$puppetCmd += " `"$PSScriptRoot/environments/production/manifests/site.pp`""
 
 Write-Host "Run puppet setup"
 Write-Host $puppetCmd
