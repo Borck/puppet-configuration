@@ -1,6 +1,8 @@
-define reg_ensure_file_ext(String $display_name, String $icon) {
+define registryx::ensure_file_type(
+  String $fullname,
+  String $icon) {
   registry_key   { "HKCR\\${name}file": ensure => present }
-  registry_value { "HKCR\\${name}file\\": data => $display_name }
+  registry_value { "HKCR\\${name}file\\": data => $fullname }
   registry_key   { "HKCR\\${name}file\\defaulticon": ensure => present }
   registry_value { "HKCR\\${name}file\\defaulticon\\": data => $icon }
   registry_key   { "HKCR\\${name}file\\shell": ensure => present }
@@ -8,18 +10,152 @@ define reg_ensure_file_ext(String $display_name, String $icon) {
   registry_value { "HKCR\\.${name}\\": data => "${name}file" }
 }
 
-define reg_ensure_file_ext_value(String $value) {
+#TODO allow to define a member as absent
+define registryx::ensure_class(
+  Optional[String]         $fullname = undef,
+  Optional[String]         $default_icon = undef,
+  Optional[String]         $content_type = undef,
+  Optional[String]         $perceived_type = undef,
+  Optional[String]         $classes_root = undef,
+
+  Optional[Variant[
+    String,
+    Array[String]
+  ]]                       $associated_by  = undef, #TODO
+
+  #TODO in shell, support other value types than registry::string
+  Optional[
+    Hash[
+      String,
+      Hash[
+        String,
+        Variant[ String, Numeric, Array[String], Enum['absent'] ]
+      ]
+    ]
+  ] $shell = undef,
+  Optional[String]         $shell_default = undef,
+) {
+  if ($classes_root != undef) and ($associated_by != undef) {
+    warning('Using parameters $classes_root and $associated_by together may cause errors.')
+  }
+
+  $reg_root = $classes_root ? {
+    undef   => "HKCR\\${name}",
+    default => "${classes_root}\\${name}"
+  }
+
+  registry_key   { $reg_root: ensure => present }
+
+  if $fullname != undef {
+    registry_value { "${reg_root}\\": data => $fullname }
+  }
+
+  if $default_icon != undef {
+    registry_key   { "${reg_root}\\defaulticon": ensure => present }
+    registry_value { "${reg_root}\\defaulticon\\": data => $default_icon }
+  }
+
+  if $associated_by != undef {
+    $associated_by_real = $associated_by ? {
+      String        => [$associated_by],
+      Array[String] => $associated_by,
+    }
+    $associated_by_real.each |String $value| {
+      $reg_assoc_root="HKCR\\${value}"
+      registry_key   { $reg_assoc_root: ensure => present }
+      registry_value { "${reg_assoc_root}\\": data => $name }
+      if $content_type != undef {
+        registry_value { "${reg_assoc_root}\\Content Type": data => $content_type }
+      }
+      if $perceived_type != undef {
+        registry_value { "${reg_assoc_root}\\PerceivedType": data => $perceived_type }
+      }
+    }
+  }
+
+  if $shell != undef {
+    $shell.each |String $key, Hash[String, Variant[ String, Numeric, Array[String] ]] $value| {
+      $reg_shell_root = "${reg_root}\\${key}"
+
+      if ($value['command'] != undef) or
+         ($value['isolated_command'] != undef) {
+        registry_key { "${reg_shell_root}\\command": ensure => present }
+      } else {
+        registry_key { $reg_shell_root: ensure => present }
+      }
+
+      if $value['command'] != undef {
+        registry_value { "${reg_shell_root}\\command\\": data => $value['command'] }
+      }
+      if $value['fullname'] != undef {
+        registry_value { "${reg_shell_root}\\": data => $value['fullname'] }
+      }
+      if $value['icon'] != undef {
+        registry_value { "${reg_shell_root}\\icon": data => $value['icon'] }
+      }
+      if $value['extended'] != undef {
+        $extended_ensure = $value['extended'] ? { 'absent' => absent, default => present }
+        registry_value { "${reg_shell_root}\\Extended": ensure => $extended_ensure  }
+      }
+      if $value['has_lua_shield'] != undef {
+        $has_lua_shield = $value['has_lua_shield'] ? { 'absent' => absent, default => present }
+        registry_value { "${reg_shell_root}\\HasLUAShield": ensure => $has_lua_shield  }
+      }
+      if $value['never_default'] != undef {
+        $never_default = $value['never_default'] ? { 'absent' => absent, default => present }
+        registry_value { "${reg_shell_root}\\NeverDefault": ensure => $never_default  }
+      }
+      if $value['no_working_directory'] != undef {
+        $no_working_directory = $value['no_working_directory'] ? { 'absent' => absent, default => present }
+        registry_value { "${reg_shell_root}\\NoWorkingDirectory": ensure => $no_working_directory  }
+      }
+      if $value['legacy_disable'] != undef {
+        $legacy_disable = $value['legacy_disable'] ? { 'absent' => absent, default => present }
+        registry_value { "${reg_shell_root}\\LegacyDisable": ensure => $legacy_disable  }
+      }
+      if $value['mui_verb'] != undef {
+        registry_value { "${reg_shell_root}\\MUIVerb": data => $value['mui_verb'] }
+      }
+      if $value['extended_sub_commands_key'] != undef {
+        registry_value { "${reg_shell_root}\\ExtendedSubCommandsKey": data => $value['extended_sub_commands_key'] }
+      }
+      if $value['sub_commands'] != undef {
+        registry_value { "${reg_shell_root}\\SubCommands": data => $value['sub_commands'] }
+      }
+      if $value['isolated_command'] != undef {
+        registry_value { "${reg_shell_root}\\command\\IsolatedCommand": data => $value['isolated_command'] }
+      }
+    }
+    if $shell_default != undef {
+      registry_key   { $reg_shell_root: ensure => present }
+      registry_value { "${reg_shell_root}\\": data => $shell_default }
+    }
+  }
+}
+
+
+
+define registryx::ensure_file_type_value(String $value) {
   registry_value { "HKCR\\.${name}": data => $value }
 }
 
-define reg_ensure_archive_ext(String $icondirectory) {
-  reg_ensure_file_ext { $name: display_name => "${name} Archive", icon => "${icondirectory}\\${name}.ico" }
-  registry_key   { "HKCR\\${name}file\\shell\\open\\command": ensure => present }
-  registry_value { "HKCR\\${name}file\\shell\\": data => 'open' }
-  registry_value { "HKCR\\${name}file\\shell\\open\\command\\": data => '"C:\\Program Files\\7-Zip\\7zFM.exe" "%1"' }
-  registry_value { "HKCR\\${name}file\\shell\\open\\Icon": data => '"C:\\Program Files\\7-Zip\\7zFM.exe"' }
-  registry_value { "HKCR\\.${name}\\PerceivedType": data => 'compressed' }
+
+
+define reg_ensure_archive_type(
+  String $icondir,
+  String $command_open,
+  String $command_open_icon
+) {
+  registryx::ensure_class { "${name}file":
+    fullname       => "${upcase($name)}-Archive",
+    default_icon   => "${icondir}\\${name}.ico",
+    associated_by  => ".${name}",
+    shell          => { 'open' => {command => $command_open, icon => $command_open_icon}},
+    perceived_type => 'compressed'
+  }
 }
+
+
 
 class setup_win {
   # New modules and packages can be found here
@@ -30,6 +166,17 @@ class setup_win {
   ###########################################################################
   ########## TODO ###########################################################
   ###########################################################################
+  # package matrix
+  # csv file which containes the packages to install under different users/groups/systems
+  # groups: normal_users, advanced_users ,dev_users, etc.
+  # TODO groups be join using a install script and are refered in the registry
+
+  # announce scheduled software update x hours before, and all to skip it
+
+  #   if !defined(Registry_key[$key]) {
+  #     registry_key { $key: }
+  #   }
+
   # https://librarian-puppet.com/
 
   # https://forge.puppet.com/puppetlabs/scheduled_task
@@ -48,19 +195,19 @@ class setup_win {
   ########## Configuration ##################################################
   ###########################################################################
 
-  $username = $identity['user']
-  $hkcu = "HKU\\${identity_win['sid']}"
-  $localappdata = $identity_win['localappdata']
+  $username = $::identity['user']
+  $hkcu = "HKU\\${::identity_win['sid']}"
+  $localappdata = $::identity_win['localappdata']
 
-  $is_my_pc   = 'borck' in downcase($hostname)
-  $is_at_pc   = $hostname =~ /^AT\d+$/
+  $is_my_pc   = 'borck' in downcase($::hostname)
+  $is_at_pc   = $::hostname =~ /^AT\d+$/
   $is_dev_pc  = $is_my_pc or $is_at_pc
   $is_my_user = '\\borck' in downcase($username)
 
   # TODO extract this list programmatically by evaluating package ensurances
   $packages_do_not_upgrade_by_scheduled_task = [
-    'office365proplus',
-    'firefox',
+    'office365proplus', # managed over windows update
+    'firefox', # has a silent updater
 
     'ghostscript',
     'miktex',
@@ -71,7 +218,9 @@ class setup_win {
     'eclipse',
     'tortoisegit',
 
-    'visualstudio2017enterprise',
+    'vscode', # has a silent updater
+
+    'visualstudio2017enterprise', # to large
     'visualstudio2017-workload-data',
     'visualstudio2017-workload-manageddesktop',
     'visualstudio2017-workload-nativecrossplat',
@@ -93,7 +242,7 @@ class setup_win {
 
   # include chocolatey as default package provider
   include chocolatey
-  Package { provider => chocolatey }
+  Package { provider => chocolatey, ensure => present }
 
 
 
@@ -101,11 +250,11 @@ class setup_win {
   ########## Drivers/Device Software ########################################
   ###########################################################################
 
-  package { 'sdio': ensure => present } # Snappy Driver Installer Origin (open source)
-  # package { 'driverbooster': ensure => latest } # checksum error
+  package { 'sdio': } # Snappy Driver Installer Origin (open source)
+  # package { 'driverbooster': } # checksum error
 
   if $is_my_pc {
-    package { 'logitech-options': ensure => latest } # Logitech Options software lets you customize your device settings
+    package { 'logitech-options': } # Logitech Options software lets you customize your device settings
     registry_value {'HKLM\\SOFTWARE\\Logitech\\LogiOptions\\Analytics\\Enabled': data => '0'}
     xml_fragment { 'logitech-options_disable_non_silent_update_wizard':
       ensure  => 'present',
@@ -120,40 +269,40 @@ class setup_win {
   ########## Office #########################################################
   ###########################################################################
   if $is_my_pc {
-    package { 'office365proplus': ensure => present }
+    package { 'office365proplus': }
   }
-  package { 'firefox': ensure => present } #firefox have a very silent update mechanism
-  package { 'EdgeDeflector': ensure => latest } #redirects URIs to the default browser (caution: menu popup)
+  package { 'firefox': } #firefox have a very silent update mechanism
+  package { 'EdgeDeflector': } #redirects URIs to the default browser (caution: menu popup)
 
 
   #class {'sevenzip': package_ensure => 'latest', package_name => ['7zip'], prerelease => false }
-  package { '7zip': ensure => latest }
+  package { '7zip': }
 
-  package { 'capture2text': ensure => latest } # screenshot to text
-  #package { 'jcpicker': ensure => latest } # installer not working (from 20190605)
-  package { 'screentogif': ensure => latest }
-  package { 'AutoHotKey': ensure => latest }
-  package { 'runasdate': ensure => latest }
+  package { 'capture2text': } # screenshot to text
+  #package { 'jcpicker': } # installer not working (from 20190605)
+  package { 'screentogif': }
+  package { 'AutoHotKey': }
+  package { 'runasdate': }
 
   # rainmeter is unofficial and not a silent installer
-  # package { 'rainmeter': ensure => latest }
+  # package { 'rainmeter': }
 
   if $is_dev_pc {
-    # package { 'cloudstation': ensure => present } # Synology Cloud Station Drive, synology drive used instead
+    #  } # Synology Cloud Station Drive, synology drive used instead
 
-    package { 'ghostscript': ensure => present }
-    package { ['miktex', 'texstudio', 'jabref']: ensure => present }
-    package { 'yed': ensure => latest }
+    package { 'ghostscript': }
+    package { ['miktex', 'texstudio', 'jabref']: }
+    package { 'yed': }
   } else {
-    #package { 'googlechrome': ensure => present }
-    #package { 'adobereader': ensure => present } 
+    #package { 'googlechrome': }
+    #package { 'adobereader': } 
   }
 
 
   if $::architecture == 'x64' {
     # [..] index Adobe PDF documents using Microsoft indexing clients. This allows the user to easily search for text
     # within Adobe PDF documents. [..]
-    package { 'pdf-ifilter-64': ensure => latest }
+    package { 'pdf-ifilter-64': }
   }
 
 
@@ -161,24 +310,24 @@ class setup_win {
   ########## File Management ################################################
   ###########################################################################
 
-  package { 'dupeguru': ensure => latest }
-  package { 'lockhunter': ensure => latest }
-  package { 'windirstat': ensure => latest }
-  package { 'junction-link-magic': ensure => latest }
-  package { 'bulkrenameutility': ensure => latest }
+  package { 'dupeguru': }
+  package { 'lockhunter': }
+  package { 'windirstat': }
+  package { 'junction-link-magic': }
+  package { 'bulkrenameutility': }
   registry_key { [
-      'HKEY_CLASSES_ROOT\\*\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
-      'HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
-      'HKEY_CLASSES_ROOT\\Drive\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
+      'HKCR\\*\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
+      'HKCR\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
+      'HKCR\\Drive\\shellex\\ContextMenuHandlers\\BRUMenuHandler',
     ] : ensure => absent, require => Package['bulkrenameutility'] }
-  #registry_value {"HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler\\": \\ data => '{5D924130-4CB1-11DB-B0DE-0800200C9A66}'}
+  #registry_value {"HKCR\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler\\": \\ data => '{5D924130-4CB1-11DB-B0DE-0800200C9A66}'}
 
 
   ###########################################################################
   ########## Media tools/tweaks #############################################
   ###########################################################################
 
-  package { 'vlc': ensure => latest }
+  package { 'vlc': }
   if $is_my_user {
     registry_value { [
         'HKCR\\Directory\\shell\\AddToPlaylistVLC\\LegacyDisable',
@@ -186,9 +335,9 @@ class setup_win {
       ]: ensure => present, data => '', require => Package['vlc'] }
   }
 
-  package { 'sketchup': ensure => latest }  # sketchup 2017, last free version
+  package { 'sketchup': }  # sketchup 2017, last free version
 
-  package { 'caesium.install': ensure => latest }
+  package { 'caesium.install': }
   file { 'caesium.shortcut':
     ensure  => present,
     path    => 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Caesium\\Caesium - Image Converter.lnk',
@@ -199,41 +348,41 @@ class setup_win {
     ensure => absent,
   }
 
-  package { 'handbrake': ensure => latest }
-  package { 'FileOptimizer': ensure => latest }
+  package { 'handbrake': }
+  package { 'FileOptimizer': }
 
-  package { ['audacity', 'audacity-lame']: ensure => latest }
+  package { ['audacity', 'audacity-lame']: }
 
   if $is_my_pc {
-    package { 'Calibre': ensure => latest } # convert * to ebook
+    package { 'Calibre': } # convert * to ebook
 
-    #package { 'itunes': ensure => latest }  #used MS Store version
+    #package { 'itunes': }  #used MS Store version
     package { 'mp3tag':
       ensure          => latest,
       install_options => ['--package-parameters=\'"/NoDesktopShortcut', '/NoContextMenu"\'']
     }
     registry_key {'HKCR\\Directory\\shellex\\ContextMenuHandlers\\Mp3tagShell': ensure => absent, require => Package['mp3tag']}
 
-    # package { 'vcredist2008': ensure => present } # install issue
-    package { 'picard': ensure => latest } # MusicBrainz Picard, music tags online grabber, requires 'vcredist2008'
+    # package { 'vcredist2008': } # install issue
+    package { 'picard': } # MusicBrainz Picard, music tags online grabber, requires 'vcredist2008'
 
-    #package { 'mkvtoolnix': ensure => latest } #not in use
+    #package { 'mkvtoolnix': } #not in use
   }
 
   if $is_my_user {
     #nuke Windows Media Player
-    registry_value { [
-        'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Enqueue\\LegacyDisable',
-        'HKCR\\SystemFileAssociations\\Directory.Audio\\shell\\Play\\LegacyDisable',
-        'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Enqueue\\LegacyDisable',
-        'HKCR\\SystemFileAssociations\\Directory.Image\\shell\\Play\\LegacyDisable',
-        #'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Enqueue\\LegacyDisable',
-        #'HKCR\\SystemFileAssociations\\Directory.Video\\shell\\Play\\LegacyDisable',
-        'HKCR\\SystemFileAssociations\\audio\\shell\\Enqueue\\LegacyDisable',
-        'HKCR\\SystemFileAssociations\\audio\\shell\\Play\\LegacyDisable',
-        #'HKCR\\SystemFileAssociations\\video\\shell\\Enqueue\\LegacyDisable',
-        #'HKCR\\SystemFileAssociations\\video\\shell\\Play\\LegacyDisable',
-      ]: ensure => present, data => '' }
+    registryx::ensure_class { [
+        'SystemFileAssociations\\Directory.Audio',
+        'SystemFileAssociations\\Directory.Image',
+        #'HKCR\\SystemFileAssociations\\Directory.Video',
+        'SystemFileAssociations\\audio',
+        #'SystemFileAssociations\\video',
+      ]: shell => {
+        'Enqueue' => { legacy_disable => ''},
+        'Play'    => { legacy_disable => ''},
+      }
+    }
+
     registry_key { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo': ensure => absent }
     #registry_value { 'HKCR\\SystemFileAssociations\\Directory.Audio\\shellex\\ContextMenuHandlers\\PlayTo\\': 
       #ensure => absent, data => '{7AD84985-87B4-4a16-BE58-8B72A5B390F7}' }
@@ -242,36 +391,23 @@ class setup_win {
   ###########################################################################
   ########## SVG/Inkscape ###################################################
   ###########################################################################
-  package { 'inkscape': ensure => latest }
+  package { 'inkscape': }
   $inkscape = "C:\\Program Files\\inkscape\\inkscape.exe"
-  registry_key   {'HKCR\\Applications\\inkscape.exe\\shell\\open\\command': ensure => present}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\command\\': data => "\"${inkscape}\", \"%1\""}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\open\\icon': data => "\"${inkscape}\", 0"}
-
-  registry_key {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu': ensure => present}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu\\ExtendedSubCommandsKey': data => 'Applications\\inkscape.exe\\ContextMenus\\converters'}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\shell\\convertmenu\\': data => 'Convert'}
-
-  registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\command': ensure => present}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\icon': data => "\"${inkscape}\", 0"}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\': data => 'Convert to PNG'}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPng\\command\\': data => "\"${inkscape}\" -z \"%1\" -e \"%1.png\""}
-
-  registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\command': ensure => present}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\icon': data => "\"${inkscape}\", 0"}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\': data => 'Convert to PS'}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPs\\command\\': data => "\"${inkscape}\" -z \"%1\" -P \"%1.ps\""}
-
-  registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\command': ensure => present}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\icon': data => "\"${inkscape}\", 0"}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\': data => 'Convert to EPS'}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToEps\\command\\': data => "\"${inkscape}\" -z \"%1\" -E \"%1.eps\""}
-
-  registry_key {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\command': ensure => present}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\icon': data => "\"${inkscape}\", 0"}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\': data => 'Convert to PDF'}
-  registry_value {'HKCR\\Applications\\inkscape.exe\\ContextMenus\\converters\\Shell\\ConvertToPdf\\command\\': data => "\"${inkscape}\" -z \"%1\" -A \"%1.pdf\""}
-
+  $inkscape_reg_convertermenu = 'Applications\\inkscape.exe\\ContextMenus\\converters'
+  registryx::ensure_class { 'Applications\\inkscape.exe':
+    shell => {
+      'open'        => {command => "\"${inkscape}\", \"%1\"", icon => "\"${inkscape}\", 0"},
+      'convertmenu' => {fullname => 'Convert', extended_sub_commands_key => $inkscape_reg_convertermenu}
+    }
+  }
+  registryx::ensure_class { $inkscape_reg_convertermenu:
+    shell => {
+      'ConvertToPng' => {fullname => 'Convert to PNG', icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -e \"%1.png\""},
+      'ConvertToPs'  => {fullname => 'Convert to PS',  icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -P \"%1.ps\"" },
+      'ConvertToEps' => {fullname => 'Convert to EPS', icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -E \"%1.eps\""},
+      'ConvertToPdf' => {fullname => 'Convert to PDF', icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -A \"%1.pdf\""},
+    }
+  }
 
 
   ###########################################################################
@@ -298,15 +434,14 @@ class setup_win {
     ensure          => present,
     install_options => ['-installarguments', "\"/notepad=${notepad_replace_helperlink}", '/verysilent"'],
   }
-
-  registry_value {'HKCR\\SystemFileAssociations\\text\\shell\\open\\icon': data => $notepad_replace_helperlink}
-  registry_value {'HKCR\\SystemFileAssociations\\text\\shell\\edit\\LegacyDisable': data => ''}
-
-  #comment code, because of changed 'Open With' setting above for *.txt files
-  #registry_value {'HKCR\\txtfile\\shell\\open\\icon': data => $notepad_replace_helperlink}
-  #registry_value {'HKCR\\txtfile\\shell\\print\\LegacyDisable': data => ''}
-  #registry_value {'HKCR\\txtfile\\shell\\printto\\LegacyDisable': data => ''}
-
+  registryx::ensure_class{ 'SystemFileAssociations\\text':
+    shell => {
+      'open'    => {icon => $notepad_replace_helperlink},
+      'edit'    => {legacy_disable => ''},
+      'print'   => {legacy_disable => ''},
+      'printto' => {legacy_disable => ''},
+    }
+  }
 
 
 
@@ -314,31 +449,30 @@ class setup_win {
   ########## Development ####################################################
   ###########################################################################
 
-  package { 'jdk8': ensure => present } # 'ensure => latest' may dumping your system, 20190628
+  package { 'jdk8': } # '' may dumping your system, 20190628
 
   if $is_dev_pc {
     #not required yet
     #package { 'eclipse': ensure => '4.10', install_options => ['--params', '"/Multi-User"'] }
 
-    package { 'make': ensure => present }
-    #package { 'cmake': ensure => latest, install_options => ["--installargs", "'DESKTOP_SHORTCUT_REQUESTED=0'", 
+    package { 'make': }
+    #package { 'cmake': , install_options => ["--installargs", "'DESKTOP_SHORTCUT_REQUESTED=0'", 
     #  "'ADD_CMAKE_TO_PATH=System'", "'ALLUSERS=1'"] }
 
-    # package { 'virtualbox': ensure => latest, install_options => ['--params', '/NoDesktopShortcut', '/NoQuickLaunch'] }
+    # package { 'virtualbox': , install_options => ['--params', '/NoDesktopShortcut', '/NoQuickLaunch'] }
     # virtualbox.extensionpack is included in package virtualbox
-    # package { 'virtualbox.extensionpack': ensure => latest }
+    # package { 'virtualbox.extensionpack': }
 
-    package { 'sandboxie': ensure => latest }
+    package { 'sandboxie': }
 
-    package { 'hxd': ensure => latest }
+    package { 'hxd': }
 
     # inspecting PE formatted binaries such aswindows EXEs and DLLs. 
-    # package { 'pestudio': ensure => present } # deprecated
+    # package { 'pestudio': } # deprecated
 
     # git
-    package { 'git': ensure => latest }
+    package { 'git': }
     # remove git from context menu, tortoisegit will replace it
-
     registry_key { [
       'HKCR\\Directory\\shell\\git_gui',
       'HKCR\\Directory\\shell\\git_shell',
@@ -355,7 +489,7 @@ class setup_win {
     }
 
     # version control
-    package { 
+    package {
       'tortoisegit': ensure => present; #'tortoisegit': ensure => latest is causing errors
       'tortoisesvn': ensure => latest;
       'sourcetree': ensure => present;
@@ -365,43 +499,13 @@ class setup_win {
   }
 
 
-
-  ###########################################################################
-  ########## Visual Studio Code #############################################
-  ###########################################################################
-  # code for Visual Studio (not Visual Studio Code is at the and of this script)
-
   # 'visualstudiocode': ensure => latest is causing errors
   package { 'vscode':
-    ensure          => present,
     install_options => ['--params', '"/NoDesktopIcon', '/NoQuicklaunchIcon"'], # ', '/NoContextMenuFiles', '/NoContextMenuFolders
   }
-
   registry_value { 'HKCR\\Applications\\Code.exe\\shell\\open\\icon':
-    ensure  => present,
-    type    => string,
     data    => '"C:\\Program Files\\Microsoft VS Code\\Code.exe", 0',
     require => Package['vscode']}
-
-  #https://forge.puppet.com/tragiccode/vscode
-  # class { 'vscode':
-  #   package_ensure              => 'present',
-  #   #vscode_download_url           => 'https://company-name.s3.amazonaws.com/binaries/vscode-latest.exe',
-  #   #vscode_download_absolute_path => 'C:\\Windows\\Temp',
-  #   create_desktop_icon         => false,
-  #   create_quick_launch_icon    => false,
-  #   create_context_menu_files   => true,
-  #   create_context_menu_folders => true,
-  #   add_to_path                 => true,
-  #   #icon_theme                    => 'vs-seti',
-  #   #color_theme                   => 'Monokai Dimmed',
-  # }
-
-  # vscode_extension { 'jpogran.puppet-vscode': ensure  => 'present', require => Class['vscode'] }
-  # vscode_extension { 'ms-vscode.csharp': ensure  => 'present', require => Class['vscode'] }
-  # vscode_extension { 'Gimly81.matlab': ensure  => 'present', require => Class['vscode'] }
-  # vscode_extension { 'Lua': ensure  => 'present', require => Class['vscode'] }
-
 
 
 
@@ -423,20 +527,20 @@ class setup_win {
       ]: ensure => present }
 
     # creating windows installers
-    #package { 'wixtoolset': ensure => present } # manual installation of *.vsix failed
-    #package { 'visualsvn': ensure => present } #to old, not working with VS2017
+    #package { 'wixtoolset': } # manual installation of *.vsix failed
+    #package { 'visualsvn': } #to old, not working with VS2017
 
     # jetbrains
-    package { 'resharper-ultimate-all': ensure => latest }
-    #package { ['resharper', 'dotpeek', 'dotcover', 'dottrace', 'dotmemory']: ensure => present }
+    package { 'resharper-ultimate-all': }
+    #package { ['resharper', 'dotpeek', 'dotcover', 'dottrace', 'dotmemory']: }
 
     # spy/browse the visual tree of a running WPF application ... and change properties
-    package { 'snoop': ensure => latest }
+    package { 'snoop': }
 
     if $is_my_pc {
-      package { 'arduino': ensure => present }
+      package { 'arduino': }
     } else {
-      package { ['unity', 'unity-standard-assets']: ensure => present }
+      package { ['unity', 'unity-standard-assets']: }
       package { 'visualstudio2017-workload-managedgame':
         ensure  => present,
         require => [
@@ -448,16 +552,16 @@ class setup_win {
   }
 
   # not needed yet: hide 'Open with Visual Studio' in folders context menu
-  # registry_value {"HKEY_CLASSES_ROOT\\Directory\\shell\\AnyCode\\LegacyDisable": data => ''}
-  # registry_value {"HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\AnyCode\\LegacyDisable": data => ''}
+  # registry_value {"HKCR\\Directory\\shell\\AnyCode\\LegacyDisable": data => ''}
+  # registry_value {"HKCR\\Directory\\Background\\shell\\AnyCode\\LegacyDisable": data => ''}
 
 
   ###########################################################################
   ########## Gaming #########################################################
   ###########################################################################
   if $is_my_pc {
-    #package { 'origin': ensure => latest }
-    package { 'steam': ensure => present }
+    #package { 'origin': }
+    package { 'steam': }
   }
 
 
@@ -466,34 +570,34 @@ class setup_win {
   ###########################################################################
 
   if $is_my_pc {
-    package { 'winaero-tweaker': ensure => latest }
+    package { 'winaero-tweaker': }
+    registry_value {"${hkcu}\\Software\\Winaero.com\\Winaero Tweaker\\DisableUpdates": data => '3665303278'}
   }
 
-  package { ['curl', 'wget']: ensure => latest }
+  package { ['curl', 'wget']: }
 
   if $is_dev_pc {
-    
     # network tools
-    package { 
-      'putty': ensure => latest;
-      'winscp': ensure => latest;
-      'wireshark': ensure => latest;
-      'CloseTheDoor': ensure => latest; # close tcp/udp ports
-    }
+    package { [
+      'putty',
+      'winscp',
+      'wireshark',
+      'CloseTheDoor', # close tcp/udp ports
+    ]: }
 
     # image tools
-    package {
-      'etcher': ensure => latest; # image to usb drive or sd card
-      'rufus': ensure => latest; # format/create bootable USB flash drives
-      #'win32diskimager': ensure => present;
-    }
+    package { [
+      'etcher', # image to usb drive or sd card
+      'rufus', # format/create bootable USB flash drives
+      #'win32diskimager',
+    ]: }
 
     # system tools
-    package {
-      'bluescreenview': ensure => latest;
-      'regfromapp': ensure => latest;
-      'Sysinternals': ensure => latest;
-    }
+    package { [
+      'bluescreenview',
+      'regfromapp',
+      'Sysinternals',
+    ]: }
   }
 
   ###########################################################################
@@ -501,7 +605,7 @@ class setup_win {
   ###########################################################################
 
   #TODO install for all users instead of only current user
-  package { 'quicklook': ensure => latest }
+  package { 'quicklook': }
   registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\QuickLook":
     data => "\"${localappdata}\\Programs\\QuickLook\\QuickLook.exe\" /autorun"}
 
@@ -515,34 +619,28 @@ class setup_win {
 
 
     #add 'command prompt' and powershell to context menu of folders and drives
-    registry_key   { [
-        'HKCR\\Directory\\Background\\shell\\Terminals',
-        'HKCR\\Directory\\shell\\Terminals',
-        'HKCR\\Drive\\Background\\shell\\Terminals',
-        'HKCR\\Drive\\shell\\Terminals'
-      ]: ensure => present }
-    registry_value { [
-        'HKCR\\Directory\\Background\\shell\\Terminals\\Icon',
-        'HKCR\\Directory\\shell\\Terminals\\Icon',
-        'HKCR\\Drive\\Background\\shell\\Terminals\\Icon',
-        'HKCR\\Drive\\shell\\Terminals\\Icon'
-      ]: data => 'imageres.dll,-5323';
-      [
-        'HKCR\\Directory\\Background\\shell\\Terminals\\SubCommands',
-        'HKCR\\Directory\\shell\\Terminals\\SubCommands',
-        'HKCR\\Drive\\Background\\shell\\Terminals\\SubCommands',
-        'HKCR\\Drive\\shell\\Terminals\\SubCommands'
-      ]: data => 'Windows.MultiVerb.cmd;Windows.MultiVerb.cmdPromptAsAdministrator;|;Windows.MultiVerb.Powershell;Windows.MultiVerb.PowershellAsAdmin'  
+    registryx::ensure_class {
+      ['Directory', 'Directory\\Background', 'Drive', 'Drive\\Background']:
+      shell => {'Terminals' => {
+        sub_commands => join([
+                'Windows.MultiVerb.cmd',
+                'Windows.MultiVerb.cmdPromptAsAdministrator',
+                '|',
+                'Windows.MultiVerb.Powershell',
+                'Windows.MultiVerb.PowershellAsAdmin',
+              ],';'),
+        icon         => 'imageres.dll,-5323'
+      }}
     }
 
 
     # for powershell scripts (*.ps1): add 'Run as administrator' to context menu
-    registry_key   { 'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command':      ensure => present }
-    registry_value { 
-      'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\HasLUAShield': data => '';
-      'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\MUIVerb':      data => '@shell32.dll,-37448';
-      'HKCR\\Microsoft.PowerShellScript.1\\Shell\\runas\\command\\': 
-        data   => 'powershell.exe "-Command" "if((Get-ExecutionPolicy ) -ne \'AllSigned\') { Set-ExecutionPolicy -Scope Process Bypass }; & \'%1\'"';
+    registryx::ensure_class{ 'Microsoft.PowerShellScript.1':
+      shell => {'runas' => {
+        command        => 'powershell.exe "-Command" "if((Get-ExecutionPolicy ) -ne \'AllSigned\') { Set-ExecutionPolicy -Scope Process Bypass }; & \'%1\'"',
+        mui_verb       => '@shell32.dll,-37448',
+        has_lua_shield => '',
+      }}
     }
   }
 
@@ -556,23 +654,25 @@ class setup_win {
     purge              => true,
   }
 
+
   ## archives ##
+  $archive_tool = "C:\\Program Files\\7-Zip\\7zFM.exe"
   $icons_archives = "${icons}\\7_zip_filetype_theme___windows_10_by_masamunecyrus-d93yxyk"
-  reg_ensure_archive_ext {
-      '001' : icondirectory => $icons_archives;
-      '7z' : icondirectory => $icons_archives;
-      'bz2' : icondirectory => $icons_archives;
-      'gz' : icondirectory => $icons_archives;
-      'rar' : icondirectory => $icons_archives;
-      'tar' : icondirectory => $icons_archives;
+  reg_ensure_archive_type {
+      ['001', '7z', 'bz2', 'gz', 'rar', 'tar']:
+      icondir           => $icons_archives,
+      command_open      => "\"${archive_tool}\" \"%1\"",
+      command_open_icon => "\"${archive_tool}\",0"
   }
 
   ## graphics ##
-  package { 'svg-explorer-extension': ensure => latest }
-  reg_ensure_file_ext { 'svg' : display_name => 'Scalable Vector Graphics', icon => "${icons}\\svgfile.ico" }
-  reg_ensure_file_ext_value { 
-    'svg\\Content Type'  : value => 'image/svg+xml';
-    'svg\\PerceivedType' : value => 'image';
+  package { 'svg-explorer-extension': }
+  registryx::ensure_class { 'svgfile' :
+    fullname       => 'Scalable Vector Graphics',
+    default_icon   => "${icons}\\svgfile.ico",
+    associated_by  => '.svg',
+    content_type   => 'image/svg+xml',
+    perceived_type => 'image'
   }
 
 
@@ -583,7 +683,6 @@ class setup_win {
     # NOTE: the recycling bin can also be remove on 'Configure Desktop Icons' window, [WIN]+[R] and type:
     #       rundll32.EXE shell32.dll,Control_RunDLL desk.cpl,,0
     # NOTE: https://www.windows-faq.de/2017/12/27/papierkorb-symbol-nicht-auf-dem-desktop-anzeigen/ 
-
     $recyclebin_reg = "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}"
     registry_value { [
         "${recyclebin_reg}\\DefaultIcon\\",
@@ -591,7 +690,6 @@ class setup_win {
       ]:                                       data => "${icons}\\recycle-bin-full.ico,0";
       "${recyclebin_reg}\\DefaultIcon\\empty": data => "${icons}\\recycle-bin-empty.ico,0";
     }
-
     registry_key   { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum": ensure => present }
     # set to zero (disabled), because of issues with customized icons
     registry_value { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
@@ -629,80 +727,70 @@ class setup_win {
 
     #enable checkboxes
     registry_value { "${hkcu}\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\AutoCheckSelect":
-      ensure => present, type => dword, data => 0x00000001 }
+      type => dword, data => 0x00000001 }
 
-    # add quick merge to context menu of reg-files
-    registry_key   { 'HKCR\\regfile\\shell\\quickmerge\\command': ensure => present }
-    registry_value { 
-      'HKCR\\regfile\\shell\\quickmerge\\':             data   => 'Quick Merge (no confirm)';
-      'HKCR\\regfile\\shell\\quickmerge\\Extended':     ensure => absent;
-      'HKCR\\regfile\\shell\\quickmerge\\NeverDefault': data   => '';
-      'HKCR\\regfile\\shell\\quickmerge\\command\\':    data   => 'regedit.exe /s "%1"'
-    }
+  }
 
-    # add 'Restart Explorer' to context menu of desktop
-    registry_key   { 'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\command': ensure => present }
-    registry_value { [
-        'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\',
-        'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\MUIVerb'
-      ]: ensure => present, data => 'Restart Explorer';
-      'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\icon': ensure => present, data => 'explorer.exe';
-      'HKCR\\DesktopBackground\\Shell\\Restart Explorer\\command\\': ensure => present, data => 'TSKILL EXPLORER';
+  # add quick merge to context menu of reg-files
+  registryx::ensure_class { 'regfile':
+    shell => {
+      'quickmerge' => {
+        fullname      => 'Quick Merge (no confirm)',
+        command       => 'regedit.exe /s "%1"',
+        icon          => 'regedit.exe, 0',
+        never_default => '',
+        extended      => absent,
+      },
     }
+  }
+
+  # add 'Restart Explorer' to context menu of desktop
+  registryx::ensure_class { 'DesktopBackground':
+    shell => {'Restart Explorer' => {command => 'TSKILL EXPLORER', icon => 'explorer.exe, 0'}}
   }
 
   if $is_my_user {
     # keyboard: remap capslock to shift
-    registry_value { 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Keyboard Layout\\Scancode Map':
-      ensure => present, type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
+    registry_value {
+      $is_my_pc ? {
+        true => 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Keyboard Layout\\Scancode Map', # system wide
+        default => "${hkcu}\\Keyboard Layout\\Scancode Map"                                # system wide
+      }:
+      type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
 
     # Hide_Message_-_“Es_konnten_nicht_alle_Netzlaufwerke_wiederhergestellt_werden”
     registry_value { 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\NetworkProvider\\RestoreConnection':
-      ensure => present, type => dword, data => '0x00000000' }
+      type => dword, data => '0x00000000' }
 
     # remove 'Add to library' from context menu
-    registry_key   { 'HKCR\\Folder\\ShellEx\\ContextMenuHandlers\\Library Location': ensure => absent }
-    # backup:
-    # registry_value { 'HKCR\\Folder\\ShellEx\\ContextMenuHandlers\\Library Location\\': ensure => present, data => '{3dad6c5d-2167-4cae-9914-f99e41c12cfa}' }
+    registry_key   { 'HKCR\\Folder\\ShellEx\\ContextMenuHandlers\\Library Location':
+      ensure => absent } #backup: data => '{3dad6c5d-2167-4cae-9914-f99e41c12cfa}'
 
     # remove 'Scan with Windows Defender' from context menu
     registry_key   { [
       'HKCR\\*\\shellex\\ContextMenuHandlers\\EPP',
       'HKCR\\Directory\\shellex\\ContextMenuHandlers\\EPP',
       'HKCR\\Drive\\shellex\\ContextMenuHandlers\\EPP'
-
-      # backup:
-      # registry_value { 'HKCR\\*\\ShellEx\\ContextMenuHandlers\\EPP\\': ensure => present, data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}' }
-      # registry_value { 'HKCR\\Directory\\ShellEx\\ContextMenuHandlers\\EPP\\': ensure => present, data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}' }
-    ]: ensure => absent }
+    ]: ensure => absent } # backup: data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}'
 
 
     # Disable AutoPlay for removable media drives for CurrentUser
-    registry_value { 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\NoDriveTypeAutoRun':
-      ensure => present, type => dword, data => 0x000000b5 }
+    registry_value { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\NoDriveTypeAutoRun":
+      type => dword, data => 0x000000b5 } # backup: data => 0x00000091
 
     # Remove 'Shortcut' from new links
-    # registry_value { 'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\link': ensure => present, type => binary, data => '00 00 00 00' }
-    # backup: data => '1e 00 00 00'
+    registry_value { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\link":
+      type => binary, data => '00 00 00 00' } # backup: data => '1e 00 00 00' or data => '18 00 00 00'
   }
 
   # REGISTER / UNREGISTER  DLL & OCX FILE
   #http://www.eightforums.com/tutorials/40512-register-unregister-context-menu-dll-ocx-files.html
-  registry_key   { [
-      'HKCR\\dllfile\\shell\\Register\\command',
-      'HKCR\\dllfile\\shell\\Unregister\\command',
-      'HKCR\\ocxfile\\shell\\Register\\command',
-      'HKCR\\ocxfile\\shell\\Unregister\\command',
-    ]: ensure => present }
-  registry_value   {
-    [
-      'HKCR\\dllfile\\shell\\Register\\command',
-      'HKCR\\ocxfile\\shell\\Register\\command',
-    ]: data => 'regsvr32.exe "%L"';
-    [
-      'HKCR\\dllfile\\shell\\Unregister\\command',
-      'HKCR\\ocxfile\\shell\\Unregister\\command',
-    ]: data => 'regsvr32.exe /u %L';
+
+  registryx::ensure_class { ['dllfile', 'ocxfile']:
+    shell => {
+      'Register'   => { command => 'regsvr32.exe "%L"' },
+      'Unregister' => { command => 'regsvr32.exe /u "%L"' }
+    }
   }
 
 
@@ -821,13 +909,13 @@ class setup_win {
   ########## Schedule/configure update tasks ################################
   ###########################################################################
 
-  $pp_conf = "${sysenv['pp_confdir']}/puppet.conf"
+  $pp_conf = "${::sysenv['pp_confdir']}/puppet.conf"
 
   # display current value: puppet agent --configprint runinterval
-  ini_setting { "pp_runinterval":
-    ensure  => present, path => $pp_conf, section => 'agent', setting => 'runinterval', value   => '7d',
+  ini_setting { 'pp_runinterval':
+    ensure  => present, path => $pp_conf, section => 'agent', setting => 'runinterval', value   => '1d',
   }
-  ini_setting { "pp_runruntimeout":
+  ini_setting { 'pp_runruntimeout':
     ensure  => present, path => $pp_conf, section => 'agent', setting => 'runtimeout', value   => '12h',
   }
 
@@ -856,7 +944,7 @@ class setup_win {
 
   file { $cup_all_path: ensure => 'directory', owner => $cup_owner, group => $cup_group }
   file { [$cup_script_pre, $cup_script_post]:
-    ensure => 'file', owner => $cup_owner, group => $cup_group, replace => 'no', content => "" }
+    ensure => 'file', owner => $cup_owner, group => $cup_group, replace => 'no', content => '' }
   file { $cup_script: ensure => 'file', owner => $cup_owner, group => $cup_group, replace => 'yes', content => $cup_script_content }
 
 
@@ -867,17 +955,19 @@ class setup_win {
     arguments => "-File \"${cup_script}\"",
     user      => 'system',
     trigger   => [{
-      schedule   => 'daily',
-      start_time => '11:30'
+      schedule    => 'weekly',
+      day_of_week => 'mon',
+      start_time  => '11:30'
     }],
   }
 }
 
 
 node default {
-  if $::kernel != 'windows' {
-    fail{'Only windows is supported':}
+  if $::operatingsystem != 'windows'{
+    fail("Unsupported OS ${::operatingsystem}")
   }
+
   include setup_win
 }
 
