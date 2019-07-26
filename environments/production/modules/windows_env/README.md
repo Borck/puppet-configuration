@@ -1,82 +1,76 @@
-**This module has been moved to puppet/windows_env. This version is no longer maintained.**
+# puppet-windows_env
 
-
-windows_env
-===========
 
 This module manages (system and user) Windows environment variables.
 
-Installation
-------------
+## Installation
+
 
 Install from puppet forge:
 
-    puppet module install badgerious/windows_env
+```sh
+puppet module install puppet/windows_env
+```
 
 Install from git (do this in your modulepath):
 
-    git clone https://github.com/badgerious/puppet-windows-env windows_env
-
-This module also requires the 'ffi' gem. This gem is included
-with Puppet 3.3.0+. On older versions, you'll need to do something like:
-
-```puppet
-
-package { 'ffi':
-  ensure   => installed,
-  provider => gem,
-}
-
+```sh
+git clone https://github.com/puppet/puppet-windows-env windows_env
 ```
 
-Changes
--------
+## Changes
 
-[CHANGELOG.md](https://github.com/badgerious/puppet-windows-env/blob/master/CHANGELOG.md)
+[CHANGELOG.md](CHANGELOG.md)
 
-Compatibility
--------------
+## Compatibility
 
-Puppet 3.7 or greater requires version 2.2.0 or greater of this module.
+This module is currently tested against Puppet 4.10 and latest Puppet 5
+releases. You can see the range of supported Puppet versions in the
+[metadata.json](metadata.json).
 
-Usage
------
+## Usage
 
 ### Parameters
 
 #### `ensure`
-Standard ensure, valid values are `absent` or `present`. Defaults to `present`. 
+
+Standard ensure, valid values are `absent` or `present`. Defaults to `present`.
 
 #### `variable` (namevar)
+
 The name of the environment variable. This will be inferred from the title if
 not given explicitly. The title can be of either the form `{variable}={value}`
-(the fields will be split on the first `=`) or just `{variable}`. 
+(the fields will be split on the first `=`) or just `{variable}`.
 
 #### `value` (namevar)
+
 The value of the environment variable. How this will treat existing content
-depends on `mergemode`. 
+depends on `mergemode`.
 
 #### `user` (namevar)
+
 The user whose environment will be modified. Default is `undef`, i.e. system
 environment. The user can be local or domain, as long as they have a local
 profile (typically `C:\users\{username}` on Vista+).  There is no awareness of
 network profiles in this module; knowing how changes to the local profile will
-affect a distributed profile is up to you. 
+affect a distributed profile is up to you.
 
 #### `separator`
+
 How to split entries in environment variables with multiple values (such as
-`PATH` or `PATHEXT`) . Default is `';'`. 
+`PATH` or `PATHEXT`) . Default is `';'`.
 
 #### `mergemode`
+
 Specifies how to treat content already in the environment variable, and how to
-handle deletion of variables. Default is `insert`. 
+handle deletion of variables. Default is `insert`.
 
 Valid values:
 
 - `clobber`
   - When `ensure => present`, creates a new variable (if necessary) and sets
     its value. If the variable already exists, its value will be overwritten.
-  - When `ensure => absent`, the environment variable will be deleted entirely. 
+  - When `ensure => absent`, the environment variable will be deleted entirely.
 - `insert`
   - When `ensure => present`, creates a new variable (if necessary) and sets
     its value. If the variable already exists, the puppet resource provided
@@ -87,7 +81,7 @@ Valid values:
   - When `ensure => absent`, the value provided by the puppet resource will be
     removed from the environment variable. Other content will be left
     unchanged. The environment variable will not be removed, even if its
-    contents are blank. 
+    contents are blank.
 - `prepend`
   - Same as `insert`, except Puppet will ensure the value appears **first**. If
     the specified value is already in the variable, but not at the beginning, it
@@ -102,16 +96,17 @@ Valid values:
     be avoided.
 - `append`
   - Same as `prepend`, except the new value will be placed at (or be moved to) the end of the
-    variable's existing contents rather than the beginning. 
+    variable's existing contents rather than the beginning.
 
 #### `type`
+
 The type of registry value to use. Default is `undef` for existing keys (i.e.
-don't change the type) and `REG_SZ` when creating new keys. 
+don't change the type) and `REG_SZ` when creating new keys.
 
 Valid values:
 
 - `REG_SZ`
-  - This is a regular registry string item with no substitution. 
+  - This is a regular registry string item with no substitution.
 - `REG_EXPAND_SZ`
   - Values of this type will expand '%' enclosed strings (e.g. `%SystemRoot%`)
     derived from other environment variables. If you're on a 64-bit system and
@@ -121,27 +116,28 @@ Valid values:
     disable value rewriting. Older systems will rewrite certain values. The
     gory details can be found here:
     http://msdn.microsoft.com/en-us/library/windows/desktop/aa384232%28v=vs.85%29.aspx
-    . 
+    .
 
 #### `broadcast_timeout`
+
 Specifies how long (in ms) to wait (per window) for refreshes to go through
 when environment variables change. Default is 100ms. This probably doesn't
 need changing unless you're having issues with the refreshes taking a long time
 (they generally happen nearly instantly). Note that this only works for the user
 that initiated the puppet run; if puppet runs in the background, updates to the
 environment will not propagate to logged in users until they log out and back in
-or refresh their environment by some other means. 
+or refresh their environment by some other means.
 
 ### Examples
 
 ```puppet
 
-    # Title type #1. Variable name and value are extracted from title, splitting on '='. 
-    # Default 'insert' mergemode is selected and default 'present' ensure is selected, 
-    # so this will add 'C:\code\bin' to PATH, merging it neatly with existing content. 
+    # Title type #1. Variable name and value are extracted from title, splitting on '='.
+    # Default 'insert' mergemode is selected and default 'present' ensure is selected,
+    # so this will add 'C:\code\bin' to PATH, merging it neatly with existing content.
     windows_env { 'PATH=C:\code\bin': }
 
-    # Title type #2. Variable name is derived from the title, but not value (because there is no '='). 
+    # Title type #2. Variable name is derived from the title, but not value (because there is no '=').
     # This will remove the environment variable 'BADVAR' completely.
     windows_env { 'BADVAR':
       ensure    => absent,
@@ -149,9 +145,9 @@ or refresh their environment by some other means.
     }
 
     # Title type #3. Title doesn't set parameters (because both 'variable' and 'value' have
-    # been supplied manually). 
-    # This will create a new environment variable 'MyVariable' and set its value to 'stuff'. 
-    # If the variable already exists, its value will be replaced with 'stuff'. 
+    # been supplied manually).
+    # This will create a new environment variable 'MyVariable' and set its value to 'stuff'.
+    # If the variable already exists, its value will be replaced with 'stuff'.
     windows_env {'random_title':
       ensure    => present,
       variable  => 'MyVariable',
@@ -160,7 +156,7 @@ or refresh their environment by some other means.
     }
 
     # Variables with 'type => REG_EXPAND_SZ' allow other environment variables to be used
-    # by enclosing them in percent symbols. 
+    # by enclosing them in percent symbols.
     windows_env { 'JAVA_HOME=%ProgramFiles%\Java\jdk1.6.0_02':
       type => REG_EXPAND_SZ,
     }
@@ -179,7 +175,7 @@ or refresh their environment by some other means.
 
     # Creates (if needed) an enviroment variable 'VAR', and sticks 'VAL:VAL2' at
     # the beginning. Separates with : instead of ;. The broadcast_timeout change
-    # probably won't make any difference. 
+    # probably won't make any difference.
     windows_env { 'title':
       ensure            => present,
       mergemode         => prepend,
@@ -198,9 +194,52 @@ or refresh their environment by some other means.
       subscribe   => Windows_env['KOOLVAR'],
       refreshonly => true,
     }
-
 ```
 
-Acknowledgements
-----------------
-The [puppet-windows-path](https://github.com/basti1302/puppet-windows-path) module by Bastian Krol was the starting point for this module. 
+## Facts
+
+### `windows_env`
+
+A structured fact which lists the following Windows environment variables
+
+- ALLUSERSPROFILE
+- APPDATA
+- COMMONPROGRAMFILES
+- COMMONPROGRAMFILES(X86)
+- HOME
+- HOMEDRIVE
+- HOMEPATH
+- LOCALAPPDATA
+- PATHEXT
+- PROCESSOR_IDENTIFIER
+- PROCESSOR_LEVEL
+- PROCESSOR_REVISION
+- PROGRAMDATA
+- PROGRAMFILES
+- PROGRAMFILES(X86)
+- PSMODULEPATH
+- PUBLIC
+- SYSTEMDRIVE
+- SYSTEMROOT
+- TEMP
+- TMP
+- USERPROFILE
+- WINDIR
+
+Note that the names will appear as uppercase in the fact, for example the `windir` environment variable will appears as `WINDIR` in the fact
+
+### Examples
+
+```puppet
+    $app_data = $facts['windows_env']['APPDATA']
+
+    # Output the AppData path in the puppet log
+    notify { $app_data: }
+```
+
+## Acknowledgements
+
+The [puppet-windows-path](https://github.com/basti1302/puppet-windows-path)
+module by Bastian Krol was the starting point for this module.
+puppet-windows_env got migrated from [badgerious](https;//github.com/badgerious)
+to Vox Pupuli.

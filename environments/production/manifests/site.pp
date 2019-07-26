@@ -64,7 +64,7 @@ class setup_win {
 
   $username = $::identity['user']
   $hkcu = "HKU\\${::identity_win['sid']}"
-  $localappdata = $::identity_win['localappdata']
+  $localappdata = $::windows_env['LOCALAPPDATA']
 
   $is_my_pc   = 'borck' in downcase($::hostname)
   $is_at_pc   = $::hostname =~ /^AT\d+$/

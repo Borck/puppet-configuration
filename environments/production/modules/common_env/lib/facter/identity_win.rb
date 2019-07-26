@@ -8,9 +8,6 @@ Facter.add("identity_win") do
       username, sid = whoami[1].split(',')
       identity_win["user"] = username[1..-2]
       identity_win["sid"] = sid[1..-2]
-      identity_win["localappdata"] = Facter::Util::Resolution.exec('echo %localappdata%')
-      identity_win["appdata"] = Facter::Util::Resolution.exec('echo %appdata%')
-      identity_win["userhome"] = Facter::Util::Resolution.exec('echo %userprofile%')
     end
     
     identity_win

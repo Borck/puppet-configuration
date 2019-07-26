@@ -9,9 +9,7 @@ puppetUpgradeModule puppetlabs-chocolatey
 puppetUpgradeModule puppetlabs-powershell
 puppetUpgradeModule puppetlabs-registry
 puppetUpgradeModule puppetlabs-stdlib
-
-puppetUpgradeModule badgerious-windows_env
-puppetUpgradeModule liamjbennett-win_facts
+puppetUpgradeModule puppet-windows_env
 
 puppetUpgradeModule ianoberst-xml_fragment
 puppetUpgradeModule puppetlabs-inifile
