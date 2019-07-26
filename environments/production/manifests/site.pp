@@ -1,171 +1,38 @@
-define registryx::ensure_file_type(
-  String $fullname,
-  String $icon) {
-  registry_key   { "HKCR\\${name}file": ensure => present }
-  registry_value { "HKCR\\${name}file\\": data => $fullname }
-  registry_key   { "HKCR\\${name}file\\defaulticon": ensure => present }
-  registry_value { "HKCR\\${name}file\\defaulticon\\": data => $icon }
-  registry_key   { "HKCR\\${name}file\\shell": ensure => present }
-  registry_key   { "HKCR\\.${name}": ensure => present }
-  registry_value { "HKCR\\.${name}\\": data => "${name}file" }
-}
-
-#TODO allow to define a member as absent
-define registryx::ensure_class(
-  Optional[String]         $fullname = undef,
-  Optional[String]         $default_icon = undef,
-  Optional[String]         $content_type = undef,
-  Optional[String]         $perceived_type = undef,
-  Optional[String]         $classes_root = undef,
-
-  Optional[Variant[
-    String,
-    Array[String]
-  ]]                       $associated_by  = undef, #TODO
-
-  #TODO in shell, support other value types than registry::string
-  Optional[
-    Hash[
-      String,
-      Hash[
-        String,
-        Variant[ String, Numeric, Array[String], Enum['absent'] ]
-      ]
-    ]
-  ] $shell = undef,
-  Optional[String]         $shell_default = undef,
-) {
-  if ($classes_root != undef) and ($associated_by != undef) {
-    warning('Using parameters $classes_root and $associated_by together may cause errors.')
-  }
-
-  $reg_root = $classes_root ? {
-    undef   => "HKCR\\${name}",
-    default => "${classes_root}\\${name}"
-  }
-
-  registry_key   { $reg_root: ensure => present }
-
-  if $fullname != undef {
-    registry_value { "${reg_root}\\": data => $fullname }
-  }
-
-  if $default_icon != undef {
-    registry_key   { "${reg_root}\\defaulticon": ensure => present }
-    registry_value { "${reg_root}\\defaulticon\\": data => $default_icon }
-  }
-
-  if $associated_by != undef {
-    $associated_by_real = $associated_by ? {
-      String        => [$associated_by],
-      Array[String] => $associated_by,
-    }
-    $associated_by_real.each |String $value| {
-      $reg_assoc_root="HKCR\\${value}"
-      registry_key   { $reg_assoc_root: ensure => present }
-      registry_value { "${reg_assoc_root}\\": data => $name }
-      if $content_type != undef {
-        registry_value { "${reg_assoc_root}\\Content Type": data => $content_type }
-      }
-      if $perceived_type != undef {
-        registry_value { "${reg_assoc_root}\\PerceivedType": data => $perceived_type }
-      }
-    }
-  }
-
-  if $shell != undef {
-    $shell.each |String $key, Hash[String, Variant[ String, Numeric, Array[String] ]] $value| {
-      $reg_shell_root = "${reg_root}\\${key}"
-
-      if ($value['command'] != undef) or
-         ($value['isolated_command'] != undef) {
-        registry_key { "${reg_shell_root}\\command": ensure => present }
-      } else {
-        registry_key { $reg_shell_root: ensure => present }
-      }
-
-      if $value['command'] != undef {
-        registry_value { "${reg_shell_root}\\command\\": data => $value['command'] }
-      }
-      if $value['fullname'] != undef {
-        registry_value { "${reg_shell_root}\\": data => $value['fullname'] }
-      }
-      if $value['icon'] != undef {
-        registry_value { "${reg_shell_root}\\icon": data => $value['icon'] }
-      }
-      if $value['extended'] != undef {
-        $extended_ensure = $value['extended'] ? { 'absent' => absent, default => present }
-        registry_value { "${reg_shell_root}\\Extended": ensure => $extended_ensure  }
-      }
-      if $value['has_lua_shield'] != undef {
-        $has_lua_shield = $value['has_lua_shield'] ? { 'absent' => absent, default => present }
-        registry_value { "${reg_shell_root}\\HasLUAShield": ensure => $has_lua_shield  }
-      }
-      if $value['never_default'] != undef {
-        $never_default = $value['never_default'] ? { 'absent' => absent, default => present }
-        registry_value { "${reg_shell_root}\\NeverDefault": ensure => $never_default  }
-      }
-      if $value['no_working_directory'] != undef {
-        $no_working_directory = $value['no_working_directory'] ? { 'absent' => absent, default => present }
-        registry_value { "${reg_shell_root}\\NoWorkingDirectory": ensure => $no_working_directory  }
-      }
-      if $value['legacy_disable'] != undef {
-        $legacy_disable = $value['legacy_disable'] ? { 'absent' => absent, default => present }
-        registry_value { "${reg_shell_root}\\LegacyDisable": ensure => $legacy_disable  }
-      }
-      if $value['mui_verb'] != undef {
-        registry_value { "${reg_shell_root}\\MUIVerb": data => $value['mui_verb'] }
-      }
-      if $value['extended_sub_commands_key'] != undef {
-        registry_value { "${reg_shell_root}\\ExtendedSubCommandsKey": data => $value['extended_sub_commands_key'] }
-      }
-      if $value['sub_commands'] != undef {
-        registry_value { "${reg_shell_root}\\SubCommands": data => $value['sub_commands'] }
-      }
-      if $value['isolated_command'] != undef {
-        registry_value { "${reg_shell_root}\\command\\IsolatedCommand": data => $value['isolated_command'] }
-      }
-    }
-    if $shell_default != undef {
-      registry_key   { $reg_shell_root: ensure => present }
-      registry_value { "${reg_shell_root}\\": data => $shell_default }
-    }
-  }
-}
-
-
-
-define registryx::ensure_file_type_value(String $value) {
-  registry_value { "HKCR\\.${name}": data => $value }
-}
-
-
-
-define reg_ensure_archive_type(
+define reg_archive_type(
   String $icondir,
   String $command_open,
   String $command_open_icon
 ) {
-  registryx::ensure_class { "${name}file":
-    fullname       => "${upcase($name)}-Archive",
+  $name_real = "${name}file"
+  registryx::class { "HKCR\\${name_real}":
+    name_or_ref    => "${upcase($name)}-Archive",
     default_icon   => "${icondir}\\${name}.ico",
-    associated_by  => ".${name}",
     shell          => { 'open' => {command => $command_open, icon => $command_open_icon}},
-    perceived_type => 'compressed'
+  }
+  registryx::class { "HKCR\\.${name}":
+    name_or_ref    => $name_real,
+    content_type   => $content_type,
+    perceived_type => $perceived_type
   }
 }
 
 
-
 class setup_win {
+  ######################################################################################################################
+  ###################################### Documentation #################################################################
+  ######################################################################################################################
+
+  # language overview: https://puppet.com/docs/puppet/6.0/lang_visual_index.html
+  # define resources:  https://puppet.com/docs/puppet/5.0/lang_defined_types.html
+
   # New modules and packages can be found here
   # https://forge.puppet.com/
   # https://chocolatey.org/
 
 
-  ###########################################################################
-  ########## TODO ###########################################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### TODO ##########################################################################
+  ######################################################################################################################
   # package matrix
   # csv file which containes the packages to install under different users/groups/systems
   # groups: normal_users, advanced_users ,dev_users, etc.
@@ -191,9 +58,9 @@ class setup_win {
 
   # https://github.com/puppetlabs/puppetlabs-windows
 
-  ###########################################################################
-  ########## Configuration ##################################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Configuration #################################################################
+  ######################################################################################################################
 
   $username = $::identity['user']
   $hkcu = "HKU\\${::identity_win['sid']}"
@@ -216,7 +83,7 @@ class setup_win {
 
     'jdk8',
     'eclipse',
-    'tortoisegit',
+    'tortoisegit', #'tortoisegit': ensure => latest may cause errors
 
     'vscode', # has a silent updater
 
@@ -236,9 +103,9 @@ class setup_win {
 
 
 
-  ###########################################################################
-  ########## Script configuration ###########################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Script configuration ##########################################################
+  ######################################################################################################################
 
   # include chocolatey as default package provider
   include chocolatey
@@ -246,9 +113,9 @@ class setup_win {
 
 
 
-  ###########################################################################
-  ########## Drivers/Device Software ########################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Drivers/Device Software #######################################################
+  ######################################################################################################################
 
   package { 'sdio': } # Snappy Driver Installer Origin (open source)
   # package { 'driverbooster': } # checksum error
@@ -265,18 +132,14 @@ class setup_win {
   }
 
 
-  ###########################################################################
-  ########## Office #########################################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Office ########################################################################
+  ######################################################################################################################
   if $is_my_pc {
     package { 'office365proplus': }
   }
   package { 'firefox': } #firefox have a very silent update mechanism
   package { 'EdgeDeflector': } #redirects URIs to the default browser (caution: menu popup)
-
-
-  #class {'sevenzip': package_ensure => 'latest', package_name => ['7zip'], prerelease => false }
-  package { '7zip': }
 
   package { 'capture2text': } # screenshot to text
   #package { 'jcpicker': } # installer not working (from 20190605)
@@ -306,9 +169,11 @@ class setup_win {
   }
 
 
-  ###########################################################################
-  ########## File Management ################################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### File Management ###############################################################
+  ######################################################################################################################
+
+  package { '7zip': }
 
   package { 'dupeguru': }
   package { 'lockhunter': }
@@ -323,9 +188,9 @@ class setup_win {
   #registry_value {"HKCR\\Directory\\shellex\\ContextMenuHandlers\\BRUMenuHandler\\": \\ data => '{5D924130-4CB1-11DB-B0DE-0800200C9A66}'}
 
 
-  ###########################################################################
-  ########## Media tools/tweaks #############################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Media tools/tweaks ############################################################
+  ######################################################################################################################
 
   package { 'vlc': }
   if $is_my_user {
@@ -358,7 +223,6 @@ class setup_win {
 
     #package { 'itunes': }  #used MS Store version
     package { 'mp3tag':
-      ensure          => latest,
       install_options => ['--package-parameters=\'"/NoDesktopShortcut', '/NoContextMenu"\'']
     }
     registry_key {'HKCR\\Directory\\shellex\\ContextMenuHandlers\\Mp3tagShell': ensure => absent, require => Package['mp3tag']}
@@ -371,12 +235,12 @@ class setup_win {
 
   if $is_my_user {
     #nuke Windows Media Player
-    registryx::ensure_class { [
-        'SystemFileAssociations\\Directory.Audio',
-        'SystemFileAssociations\\Directory.Image',
+    registryx::class { [
+        'HKCR\\SystemFileAssociations\\Directory.Audio',
+        'HKCR\\SystemFileAssociations\\Directory.Image',
         #'HKCR\\SystemFileAssociations\\Directory.Video',
-        'SystemFileAssociations\\audio',
-        #'SystemFileAssociations\\video',
+        'HKCR\\SystemFileAssociations\\audio',
+        #'HKCR\\SystemFileAssociations\\video',
       ]: shell => {
         'Enqueue' => { legacy_disable => ''},
         'Play'    => { legacy_disable => ''},
@@ -388,41 +252,34 @@ class setup_win {
       #ensure => absent, data => '{7AD84985-87B4-4a16-BE58-8B72A5B390F7}' }
   }
 
-  ###########################################################################
-  ########## SVG/Inkscape ###################################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### SVG/Inkscape ##################################################################
+  ######################################################################################################################
   package { 'inkscape': }
   $inkscape = "C:\\Program Files\\inkscape\\inkscape.exe"
   $inkscape_reg_convertermenu = 'Applications\\inkscape.exe\\ContextMenus\\converters'
-  registryx::ensure_class { 'Applications\\inkscape.exe':
+  registryx::class { 'HKCR\\Applications\\inkscape.exe':
     shell => {
       'open'        => {command => "\"${inkscape}\", \"%1\"", icon => "\"${inkscape}\", 0"},
-      'convertmenu' => {fullname => 'Convert', extended_sub_commands_key => $inkscape_reg_convertermenu}
+      'convertmenu' => {name_or_ref => 'Convert', extended_sub_commands_key => $inkscape_reg_convertermenu}
     }
   }
-  registryx::ensure_class { $inkscape_reg_convertermenu:
+  registryx::class { "HKCR\\${inkscape_reg_convertermenu}":
     shell => {
-      'ConvertToPng' => {fullname => 'Convert to PNG', icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -e \"%1.png\""},
-      'ConvertToPs'  => {fullname => 'Convert to PS',  icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -P \"%1.ps\"" },
-      'ConvertToEps' => {fullname => 'Convert to EPS', icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -E \"%1.eps\""},
-      'ConvertToPdf' => {fullname => 'Convert to PDF', icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -A \"%1.pdf\""},
+      'ConvertToPng' => {name_or_ref => 'Convert to PNG', icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -e \"%1.png\""},
+      'ConvertToPs'  => {name_or_ref => 'Convert to PS',  icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -P \"%1.ps\"" },
+      'ConvertToEps' => {name_or_ref => 'Convert to EPS', icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -E \"%1.eps\""},
+      'ConvertToPdf' => {name_or_ref => 'Convert to PDF', icon => "\"${inkscape}\", 0", command => "\"${inkscape}\" -z \"%1\" -A \"%1.pdf\""},
     }
   }
 
 
-  ###########################################################################
-  ########## Text tweaks ####################################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Text tweaks ###################################################################
+  ######################################################################################################################
 
   $default_text_editor = 'C:\\Program Files\\Microsoft VS Code\\code.exe'
   #$default_text_editor = '%SystemRoot%\system32\NOTEPAD.EXE'
-
-  # change *.txt file association
-  registry_key   {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice": ensure => present}
-  registry_value {
-    "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\ProgId": data => 'Applications\\code.exe';
-    "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.txt\\UserChoice\\Hash":   data => 'hK1YV2FCtgs=';
-  }
 
   $notepad_replace_helperdir = 'C:\\ProgramData\\NotepadReplacer'
   $notepad_replace_helperlink = "${notepad_replace_helperdir}\\notepad.exe"
@@ -434,7 +291,7 @@ class setup_win {
     ensure          => present,
     install_options => ['-installarguments', "\"/notepad=${notepad_replace_helperlink}", '/verysilent"'],
   }
-  registryx::ensure_class{ 'SystemFileAssociations\\text':
+  registryx::class{ 'HKCR\\SystemFileAssociations\\text':
     shell => {
       'open'    => {icon => $notepad_replace_helperlink},
       'edit'    => {legacy_disable => ''},
@@ -445,9 +302,9 @@ class setup_win {
 
 
 
-  ###########################################################################
-  ########## Development ####################################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Development ###################################################################
+  ######################################################################################################################
 
   package { 'jdk8': } # '' may dumping your system, 20190628
 
@@ -473,33 +330,26 @@ class setup_win {
     # git
     package { 'git': }
     # remove git from context menu, tortoisegit will replace it
-    registry_key { [
+    registryx::shell_command { [
       'HKCR\\Directory\\shell\\git_gui',
       'HKCR\\Directory\\shell\\git_shell',
       'HKCR\\Directory\\Background\\shell\\git_gui',
       'HKCR\\Directory\\Background\\shell\\git_shell',
-      ]: ensure => present, require => Package['git']
-    }
-    registry_value { [
-      'HKCR\\Directory\\shell\\git_gui\\LegacyDisable',
-      'HKCR\\Directory\\shell\\git_shell\\LegacyDisable',
-      'HKCR\\Directory\\Background\\shell\\git_gui\\LegacyDisable',
-      'HKCR\\Directory\\Background\\shell\\git_shell\\LegacyDisable',
-      ]: ensure => present, data => '', require => Package['git']
+      ]: legacy_disable => '', require => Package['git']
     }
 
     # version control
     package {
-      'tortoisegit': ensure => present; #'tortoisegit': ensure => latest is causing errors
-      'tortoisesvn': ensure => latest;
-      'sourcetree': ensure => present;
+      'tortoisegit':;
+      'tortoisesvn':;
+      'sourcetree':;
     }
 
     # package { 'python3': ensure => '3.6.0', install_options => ['--params', '/InstallDir', '"c:\\program', 'files\\Python\\Python36"']}
   }
 
 
-  # 'visualstudiocode': ensure => latest is causing errors
+  # 'visualstudiocode': ensure => latest may cause errors
   package { 'vscode':
     install_options => ['--params', '"/NoDesktopIcon', '/NoQuicklaunchIcon"'], # ', '/NoContextMenuFiles', '/NoContextMenuFolders
   }
@@ -509,9 +359,9 @@ class setup_win {
 
 
 
-  ###########################################################################
-  ########## visual studio + unity ##########################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### visual studio + unity #########################################################
+  ######################################################################################################################
 
   if $is_dev_pc {
     package { [
@@ -556,23 +406,18 @@ class setup_win {
   # registry_value {"HKCR\\Directory\\Background\\shell\\AnyCode\\LegacyDisable": data => ''}
 
 
-  ###########################################################################
-  ########## Gaming #########################################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Gaming ########################################################################
+  ######################################################################################################################
   if $is_my_pc {
     #package { 'origin': }
     package { 'steam': }
   }
 
 
-  ###########################################################################
-  ########## Administration #################################################
-  ###########################################################################
-
-  if $is_my_pc {
-    package { 'winaero-tweaker': }
-    registry_value {"${hkcu}\\Software\\Winaero.com\\Winaero Tweaker\\DisableUpdates": data => '3665303278'}
-  }
+  ######################################################################################################################
+  ###################################### Administration ################################################################
+  ######################################################################################################################
 
   package { ['curl', 'wget']: }
 
@@ -600,15 +445,41 @@ class setup_win {
     ]: }
   }
 
-  ###########################################################################
-  ########## File Explorer Tweaks ###########################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### System Tweaks #################################################################
+  ######################################################################################################################
 
   #TODO install for all users instead of only current user
   package { 'quicklook': }
   registry_value {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\QuickLook":
     data => "\"${localappdata}\\Programs\\QuickLook\\QuickLook.exe\" /autorun"}
 
+  if $is_my_pc {
+    package { 'winaero-tweaker': }
+    registry_value {"${hkcu}\\Software\\Winaero.com\\Winaero Tweaker\\DisableUpdates": data => '3665303278'}
+  }
+
+  $cmd_own_d = 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'
+  $cmd_own_f = 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'
+  $reg_own_a = {
+    name_or_ref              => 'Take Ownership',
+    no_working_directory => '',
+    icon                 => 'shell32.dll,-29',
+  }
+  #Windows.Takeownership.Drive: applies_to => 'NOT (System.ItemPathDisplay:=\"C:\\\")'
+  registryx::class { 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore':
+    shell => {
+      'Windows.Takeownership.Directory' => $reg_own_a + {
+        command          => $cmd_own_d,
+        isolated_command => $cmd_own_d,
+        applies_to       => 'NOT (System.ItemPathDisplay:=\"C:\\Users\" OR System.ItemPathDisplay:=\"C:\\ProgramData\" OR System.ItemPathDisplay:=\"C:\\Program Files\" OR System.ItemPathDisplay:=\"C:\\Program Files (x86)\" OR System.ItemPathDisplay:=\"C:\\Windows\")',
+      },
+      'Windows.Takeownership.File'      => $reg_own_a + {
+        command          => $cmd_own_f,
+        isolated_command => $cmd_own_f,
+      }
+    }
+  }
 
   if $is_dev_pc {
     # Add 'Copy Path' to shift context menu
@@ -618,32 +489,45 @@ class setup_win {
       data => '{f3d06e7c-1e45-4a26-847e-f9fcdee59be0}' }
 
 
-    #add 'command prompt' and powershell to context menu of folders and drives
-    registryx::ensure_class {
-      ['Directory', 'Directory\\Background', 'Drive', 'Drive\\Background']:
-      shell => {'Terminals' => {
+    #add 'Administration' sub menu to context menu of folders and drives
+    registryx::class {
+      ['HKCR\\Directory', 'HKCR\\Directory\\Background', 'HKCR\\Drive', 'HKCR\\Drive\\Background']:
+      shell => {'Administration' => {
         sub_commands => join([
                 'Windows.MultiVerb.cmd',
                 'Windows.MultiVerb.cmdPromptAsAdministrator',
                 '|',
                 'Windows.MultiVerb.Powershell',
                 'Windows.MultiVerb.PowershellAsAdmin',
+                '|',
+                'Windows.Takeownership.Directory',
               ],';'),
         icon         => 'imageres.dll,-5323'
       }}
     }
+    registryx::class { 'HKCR\\*':
+      shell => {'Administration' => {
+        sub_commands => join([
+                'Windows.Takeownership.File',
+              ],';'),
+        icon         => 'imageres.dll,-5323'
+      }}
+    }
+    registry_key {[
+      'HKCR\\Directory\\shell\\Terminals',
+      'HKCR\\Directory\\Background\\shell\\Terminals',
+      'HKCR\\Drive\\shell\\Terminals',
+      'HKCR\\Drive\\Background\\shell\\Terminals',
+    ]: ensure => absent }
 
 
     # for powershell scripts (*.ps1): add 'Run as administrator' to context menu
-    registryx::ensure_class{ 'Microsoft.PowerShellScript.1':
-      shell => {'runas' => {
-        command        => 'powershell.exe "-Command" "if((Get-ExecutionPolicy ) -ne \'AllSigned\') { Set-ExecutionPolicy -Scope Process Bypass }; & \'%1\'"',
-        mui_verb       => '@shell32.dll,-37448',
-        has_lua_shield => '',
-      }}
+    registryx::shell_command{ 'HKCR\\Microsoft.PowerShellScript.1\\shell\\runas':
+      command        => 'powershell.exe "-Command" "if((Get-ExecutionPolicy ) -ne \'AllSigned\') { Set-ExecutionPolicy -Scope Process Bypass }; & \'%1\'"',
+      mui_verb       => '@shell32.dll,-37448',
+      has_lua_shield => '',
     }
   }
-
 
   $icons = 'C:\\Windows\\Icons.puppet'
   file { $icons:
@@ -658,7 +542,7 @@ class setup_win {
   ## archives ##
   $archive_tool = "C:\\Program Files\\7-Zip\\7zFM.exe"
   $icons_archives = "${icons}\\7_zip_filetype_theme___windows_10_by_masamunecyrus-d93yxyk"
-  reg_ensure_archive_type {
+  reg_archive_type {
       ['001', '7z', 'bz2', 'gz', 'rar', 'tar']:
       icondir           => $icons_archives,
       command_open      => "\"${archive_tool}\" \"%1\"",
@@ -667,13 +551,16 @@ class setup_win {
 
   ## graphics ##
   package { 'svg-explorer-extension': }
-  registryx::ensure_class { 'svgfile' :
-    fullname       => 'Scalable Vector Graphics',
+  registryx::class { 'HKCR\\svgfile' :
+    name_or_ref    => 'Scalable Vector Graphics (SVG)',
     default_icon   => "${icons}\\svgfile.ico",
-    associated_by  => '.svg',
-    content_type   => 'image/svg+xml',
-    perceived_type => 'image'
   }
+  registryx::class { 'HKCR\\.svg' : 
+    name_or_ref        => 'svgfile',
+    content_type   => 'image/svg+xml',
+    perceived_type => 'image',
+  }
+
 
 
   if $is_my_user {
@@ -694,36 +581,6 @@ class setup_win {
     # set to zero (disabled), because of issues with customized icons
     registry_value { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\NonEnum\\{645FF040-5081-101B-9F08-00AA002F954E}":
       type => dword, data => 0x00000000 }
-  }
-
-  if $is_dev_pc {
-    #take ownership context entry
-    # registry_key   {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command': ensure => present}
-    # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\': data => 'Take Ownership'}
-    # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\NoWorkingDirectory': data => ''}
-    # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command\\': data => 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'}
-    # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.directories\\command\\IsolatedCommand': data => 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'}
-
-    # registry_key   {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command': ensure => present}
-    # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\': data => 'Take Ownership'}
-    # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\NoWorkingDirectory': data => ''}
-    # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command\\': data => 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'}
-    # registry_value {'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\Windows.takeownership.files\\command\\IsolatedCommand': data => 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'}
-
-    # registry_key   {'HKCR\\*\\shell\\manage_menu': ensure => present}
-    # registry_value {'HKCR\\*\\shell\\manage_menu\\SubCommands': data => 'Windows.takeownership.files'}
-    # registry_value {'HKCR\\*\\shell\\manage_menu\\': data => 'Manage'}
-    # registry_value {'HKCR\\*\\shell\\manage_menu\\icon': data => '%SystemRoot%\\System32\\shell32.dll,-137'}
-
-    # registry_key   {'HKCR\\Directory\\shell\\manage_menu': ensure => present}
-    # registry_value {'HKCR\\Directory\\shell\\manage_menu\\SubCommands': data => 'Windows.takeownership.directories'}
-    # registry_value {'HKCR\\Directory\\shell\\manage_menu\\': data => 'Manage'}
-    # registry_value {'HKCR\\Directory\\shell\\manage_menu\\icon': data => '%SystemRoot%\\System32\\shell32.dll,-137'}
-    # registry_key   {'HKCR\\Directory\\Background\\shell\\manage_menu': ensure => present}
-    # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\SubCommands': data => 'Windows.takeownership.directories'}
-    # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\': data => 'Manage'}
-    # registry_value {'HKCR\\Directory\\Background\\shell\\manage_menu\\icon': data => '%SystemRoot%\\System32\\shell32.dll,-137'}
-
 
     #enable checkboxes
     registry_value { "${hkcu}\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\AutoCheckSelect":
@@ -731,22 +588,20 @@ class setup_win {
 
   }
 
+
+
   # add quick merge to context menu of reg-files
-  registryx::ensure_class { 'regfile':
-    shell => {
-      'quickmerge' => {
-        fullname      => 'Quick Merge (no confirm)',
-        command       => 'regedit.exe /s "%1"',
-        icon          => 'regedit.exe, 0',
-        never_default => '',
-        extended      => absent,
-      },
-    }
+  registryx::shell_command { 'HKCR\\regfile\\shell\\quickmerge':
+    name_or_ref   => 'Quick Merge (no confirm)',
+    command       => 'regedit.exe /s "%1"',
+    icon          => 'regedit.exe, 0',
+    never_default => '',
+    extended      => absent,
   }
 
   # add 'Restart Explorer' to context menu of desktop
-  registryx::ensure_class { 'DesktopBackground':
-    shell => {'Restart Explorer' => {command => 'TSKILL EXPLORER', icon => 'explorer.exe, 0'}}
+  registryx::shell_command { 'HKCR\\DesktopBackground\\shell\\Restart Explorer':
+    command => 'TSKILL EXPLORER', icon => 'explorer.exe, 0'
   }
 
   if $is_my_user {
@@ -764,57 +619,46 @@ class setup_win {
 
     # remove 'Add to library' from context menu
     registry_key   { 'HKCR\\Folder\\ShellEx\\ContextMenuHandlers\\Library Location':
-      ensure => absent } #backup: data => '{3dad6c5d-2167-4cae-9914-f99e41c12cfa}'
+      ensure => absent } # default: data => '{3dad6c5d-2167-4cae-9914-f99e41c12cfa}'
 
     # remove 'Scan with Windows Defender' from context menu
     registry_key   { [
       'HKCR\\*\\shellex\\ContextMenuHandlers\\EPP',
       'HKCR\\Directory\\shellex\\ContextMenuHandlers\\EPP',
       'HKCR\\Drive\\shellex\\ContextMenuHandlers\\EPP'
-    ]: ensure => absent } # backup: data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}'
+    ]: ensure => absent } # default: data => '{09A47860-11B0-4DA5-AFA5-26D86198A780}'
 
 
-    # Disable AutoPlay for removable media drives for CurrentUser
+    # Disable AutoPlay for CD/DVD drives and USB flash drives
+    # https://docs.microsoft.com/en-us/windows/win32/shell/autoplay-reg
+    registry_key { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer": ensure => present }
     registry_value { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\NoDriveTypeAutoRun":
-      type => dword, data => 0x000000b5 } # backup: data => 0x00000091
+      type => dword, data => 0x000000b5 } # default: 0x00000091
 
     # Remove 'Shortcut' from new links
     registry_value { "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\link":
-      type => binary, data => '00 00 00 00' } # backup: data => '1e 00 00 00' or data => '18 00 00 00'
+      type => binary, data => '00 00 00 00' } # default: data => '1e 00 00 00' or data => '18 00 00 00'
   }
 
   # REGISTER / UNREGISTER  DLL & OCX FILE
   #http://www.eightforums.com/tutorials/40512-register-unregister-context-menu-dll-ocx-files.html
 
-  registryx::ensure_class { ['dllfile', 'ocxfile']:
+  registryx::class { ['HKCR\\dllfile', 'HKCR\\ocxfile']:
     shell => {
       'Register'   => { command => 'regsvr32.exe "%L"' },
       'Unregister' => { command => 'regsvr32.exe /u "%L"' }
     }
   }
 
-
-  ###########################################################################
-  ########## This PC Tweaks #################################################
-  ###########################################################################
-
-
   package { 'taskbar-winconfig':
     ensure          => present,
     install_options => ['--params', '"\'/LOCKED:yes', '/COMBINED:yes', '/PEOPLE:no', '/TASKVIEW:no', '/STORE:no', '/CORTANA:no\'"'],
   }
 
-  $regkey_hklm_sw_x86 = 'HKLM\\SOFTWARE'
-  $regkey_hklm_sw_x64 = 'HKLM\\SOFTWARE\\Wow6432Node'
-  $regsubkey_mycomputer_ns = '\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace'
-  $regsubkey_mycomputer_ns_x86 = "${regkey_hklm_sw_x86}${$regsubkey_mycomputer_ns}"
-  $regsubkey_mycomputer_ns_x64 = "${regkey_hklm_sw_x64}${$regsubkey_mycomputer_ns}"
-
   if $is_my_user {
     # remove folders from desktop
     # https://chocolatey.org/packages/desktopicons-winconfig
     package { 'desktopicons-winconfig':
-      ensure          => latest,
       install_options => ['--params', '"/AllIcons:NO"'],
     }
 
@@ -823,38 +667,24 @@ class setup_win {
       "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo":
       type => dword, data => 0x00000001 }
 
-    # how to hide element in 'This PC': http://www.thewindowsclub.com/remove-the-folders-from-this-pc-windows-10
-    $regkey_folder_desc = 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FolderDescriptions'
-    registry_value { [
-        "${regkey_folder_desc}\\{f42ee2d3-909f-4907-8871-4c22fc0bf756}\\PropertyBag\\ThisPCPolicy", # Documents
-        "${regkey_folder_desc}\\{0ddd015d-b06c-45d5-8c4c-f59713854639}\\PropertyBag\\ThisPCPolicy", # Pictures
-        "${regkey_folder_desc}\\{35286a68-3c57-41a1-bbb1-0eae73d76c95}\\PropertyBag\\ThisPCPolicy", # Videos
-      ]: ensure => present, data => 'Hide' }
-
-    # remove '3D objects'
-    registry_key { [
-        "${regsubkey_mycomputer_ns_x86}\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}",
-        "${regsubkey_mycomputer_ns_x64}\\{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}"
-      ]: ensure => absent }
+    # manage elements at 'This PC'
+    registryx::this_pc_namespace {
+      '{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}': ensure => 'hidden';  # 3D
+      '{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}': ensure => 'present'; # Desktop
+      '{f42ee2d3-909f-4907-8871-4c22fc0bf756}': ensure => 'hidden';  # Documents
+      '{374DE290-123F-4565-9164-39C4925E467B}': ensure => 'present'; # Downloads
+      '{1CF1260C-4DD0-4ebb-811F-33C572699FDE}': ensure => 'present'; # Music
+      '{0ddd015d-b06c-45d5-8c4c-f59713854639}': ensure => 'hidden';  # Pictures
+      '{645FF040-5081-101B-9F08-00AA002F954E}': ensure => 'present'; # Recycling Bin
+      '{35286a68-3c57-41a1-bbb1-0eae73d76c95}': ensure => 'hidden';  # Videos
+    }
   }
 
-  # ensure elements at 'This PC'
-  registry_key { [
-      "${regsubkey_mycomputer_ns_x86}\\{645FF040-5081-101B-9F08-00AA002F954E}", # ensure 'Recycling Bin' x86
-      "${regsubkey_mycomputer_ns_x64}\\{645FF040-5081-101B-9F08-00AA002F954E}", # ensure 'Recycling Bin' x64
-      "${regsubkey_mycomputer_ns_x86}\\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}", # ensure 'Desktop' x86
-      "${regsubkey_mycomputer_ns_x64}\\{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}", # ensure 'Desktop' x64
-      "${regsubkey_mycomputer_ns_x86}\\{374DE290-123F-4565-9164-39C4925E467B}", # ensure 'Downloads' x86
-      "${regsubkey_mycomputer_ns_x64}\\{374DE290-123F-4565-9164-39C4925E467B}", # ensure 'Downloads' x64
-      "${regsubkey_mycomputer_ns_x86}\\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}", # ensure 'Music' x86
-      "${regsubkey_mycomputer_ns_x64}\\{1CF1260C-4DD0-4ebb-811F-33C572699FDE}", # ensure 'Music' x64
-    ]: ensure => present }
 
 
-  ################################################################################
-  #                                # RELOCATE SHELL/LIBRARY FOLDERS #	       #
-  ################################################################################
-  #RELOCATE SHELL FOLDERS TO NEW DRIVE PARTITION: COOKIES | SENDTO | DOCS | FAVS | PICS | MUSIC | VIDEO | TIF | DOWNLOAD | TEMPLATES
+
+  # relocate shell/library folders to new locations/drive/paritions
+  # shell/library folders: COOKIES | SENDTO | DOCS | FAVS | PICS | MUSIC | VIDEO | TIF | DOWNLOAD | TEMPLATES
   #http://www.tweakhound.com/2013/10/22/tweaking-windows-8-1/5/
   #[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders]
   #"SendTo"="X:\\OFF_SYSTEMDRIVE\\XtremeSend2\\SendTo"
@@ -871,9 +701,9 @@ class setup_win {
   #00
 
 
-  ###########################################################################
-  ########## Regedit tweaks #################################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Regedit Tweaks ################################################################
+  ######################################################################################################################
   if $is_my_user {
     $hkcu_regfav = "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites"
     registry_key {"${hkcu_regfav}": ensure => present, purge_values => true }
@@ -905,9 +735,9 @@ class setup_win {
     }
   }
 
-  ###########################################################################
-  ########## Schedule/configure update tasks ################################
-  ###########################################################################
+  ######################################################################################################################
+  ###################################### Schedule/configure update tasks ################################
+  ######################################################################################################################
 
   $pp_conf = "${::sysenv['pp_confdir']}/puppet.conf"
 
@@ -967,7 +797,6 @@ node default {
   if $::operatingsystem != 'windows'{
     fail("Unsupported OS ${::operatingsystem}")
   }
-
   include setup_win
 }
 
