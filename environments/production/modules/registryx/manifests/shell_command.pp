@@ -8,6 +8,7 @@ define registryx::shell_command (
   Optional[Enum['absent', 'present', '']] $never_default             = undef,
   Optional[Enum['absent', 'present', '']] $no_working_directory      = undef,
   Optional[Enum['absent', 'present', '']] $legacy_disable            = undef,
+  Optional[String]                        $position                  = undef,
   Optional[String]                        $applies_to                = undef,
   Optional[String]                        $command                   = undef,
   Optional[String]                        $isolated_command          = undef,
@@ -20,7 +21,7 @@ define registryx::shell_command (
       Numeric,
       Array[String],
       Hash
-   ]]]                                    $sub_shell = undef,
+  ]]]                                     $sub_shell = undef,
 ){
   $reg_shell_root = $path ? {
     undef   => $name,
@@ -45,8 +46,8 @@ define registryx::shell_command (
   }
   if $extended != undef {
     $extended_real = $extended ? { 'absent' => absent, default => present }
-    registry_value { "${reg_shell_root}\\Extended": 
-      ensure => $entended_real }
+    registry_value { "${reg_shell_root}\\Extended":
+      ensure => $extended_real }
   }
   if $has_lua_shield != undef {
     $has_lua_shield_real = $has_lua_shield ? { 'absent' => absent, default => present }
@@ -76,12 +77,15 @@ define registryx::shell_command (
   if $isolated_command != undef {
     registry_value { "${reg_shell_root}\\command\\IsolatedCommand": data => $isolated_command }
   }
+  if $position != undef {
+    registry_value { "${reg_shell_root}\\Position": data => $position }
+  }
   if $applies_to != undef {
     registry_value { "${reg_shell_root}\\AppliesTo": data => $applies_to }
   }
   if $sub_shell != undef {
-    $shell.each |String $key, Hash[String, Variant[ String, Numeric, Array[String], Hash ]] $value| {
-      registryx::shell_command { "${reg_shell_root}\\shell\\${key}": 
+    $sub_shell.each |String $key, Hash[String, Variant[ String, Numeric, Array[String], Hash ]] $value| {
+      registryx::shell_command { "${reg_shell_root}\\shell\\${key}":
         * => $value }
     }
   }

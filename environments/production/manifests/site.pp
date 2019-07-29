@@ -5,14 +5,12 @@ define reg_archive_type(
 ) {
   $name_real = "${name}file"
   registryx::class { "HKCR\\${name_real}":
-    name_or_ref    => "${upcase($name)}-Archive",
-    default_icon   => "${icondir}\\${name}.ico",
-    shell          => { 'open' => {command => $command_open, icon => $command_open_icon}},
+    name_or_ref  => "${upcase($name)}-Archive",
+    default_icon => "${icondir}\\${name}.ico",
+    shell        => { 'open' => {command => $command_open, icon => $command_open_icon}},
   }
   registryx::class { "HKCR\\.${name}":
     name_or_ref    => $name_real,
-    content_type   => $content_type,
-    perceived_type => $perceived_type
   }
 }
 
@@ -459,7 +457,10 @@ class setup_win {
     registry_value {"${hkcu}\\Software\\Winaero.com\\Winaero Tweaker\\DisableUpdates": data => '3665303278'}
   }
 
-  $cmd_own_d = 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'
+  #$cmd_own_dir = 'powershell -windowstyle hidden -command "Start-Process cmd -ArgumentList \'/c takeown /f \\"%1\\" /r /d y && icacls \\"%1\\" /grant *S-1-3-4:F /t /c /l /q\' -Verb runAs"'
+  $cmd_own_dir   = 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'
+  $cmd_own_drive = 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant administrators:F /t'
+  #$cmd_own_f = 'powershell -windowstyle hidden -command "Start-Process cmd -ArgumentList \'/c takeown /f \\"%1\\" && icacls \\"%1\\" /grant *S-1-3-4:F /t /c /l\' -Verb runAs"'
   $cmd_own_f = 'cmd.exe /c takeown /f "%1" && icacls "%1" /grant administrators:F'
   $reg_own_a = {
     name_or_ref              => 'Take Ownership',
@@ -467,16 +468,36 @@ class setup_win {
     icon                 => 'shell32.dll,-29',
   }
   #Windows.Takeownership.Drive: applies_to => 'NOT (System.ItemPathDisplay:=\"C:\\\")'
+  $reg_own_dir_ignore = [
+    "${::windows_env['SYSTEMDRIVE']}\\Users",
+    $::windows_env['PROGRAMDATA'],
+    $::windows_env['PROGRAMFILES'],
+    $::windows_env['PROGRAMFILES(X86)'],
+    $::windows_env['SYSTEMROOT'],
+    "${::windows_env['SYSTEMROOT']}\\System",
+    "${::windows_env['SYSTEMROOT']}\\System32",
+  ].map |$dir| { "System.ItemPathDisplay:=\\\"${dir}\\\"" }
+  $reg_own_drive_ignore = [
+    $::windows_env['SYSTEMDRIVE']
+  ].map |$dir| { "System.ItemPathDisplay:=\\\"${dir}\\\"" }
   registryx::class { 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore':
     shell => {
       'Windows.Takeownership.Directory' => $reg_own_a + {
-        command          => $cmd_own_d,
-        isolated_command => $cmd_own_d,
-        applies_to       => 'NOT (System.ItemPathDisplay:=\"C:\\Users\" OR System.ItemPathDisplay:=\"C:\\ProgramData\" OR System.ItemPathDisplay:=\"C:\\Program Files\" OR System.ItemPathDisplay:=\"C:\\Program Files (x86)\" OR System.ItemPathDisplay:=\"C:\\Windows\")',
+        no_working_directory => '',
+        command              => $cmd_own_dir,
+        isolated_command     => $cmd_own_dir,
+        applies_to           => "NOT (${join($reg_own_dir_ignore, ' OR ')})"
+      },
+      'Windows.Takeownership.Drive'     => $reg_own_a + {
+        no_working_directory => '',
+        command              => $cmd_own_drive,
+        isolated_command     => $cmd_own_drive,
+        applies_to           => "NOT (${join($reg_own_drive_ignore, ' OR ')})"
       },
       'Windows.Takeownership.File'      => $reg_own_a + {
-        command          => $cmd_own_f,
-        isolated_command => $cmd_own_f,
+        no_working_directory => '',
+        command              => $cmd_own_f,
+        isolated_command     => $cmd_own_f,
       }
     }
   }
@@ -490,19 +511,32 @@ class setup_win {
 
 
     #add 'Administration' sub menu to context menu of folders and drives
-    registryx::class {
-      ['HKCR\\Directory', 'HKCR\\Directory\\Background', 'HKCR\\Drive', 'HKCR\\Drive\\Background']:
-      shell => {'Administration' => {
-        sub_commands => join([
+    $reg_admin_menu_dir_and_drive = [
                 'Windows.MultiVerb.cmd',
                 'Windows.MultiVerb.cmdPromptAsAdministrator',
                 '|',
                 'Windows.MultiVerb.Powershell',
                 'Windows.MultiVerb.PowershellAsAdmin',
                 '|',
+    ]
+    registryx::class {
+      ['HKCR\\Directory', 'HKCR\\Directory\\Background']:
+      shell => {'Administration' => {
+        sub_commands => join($reg_admin_menu_dir_and_drive+[
                 'Windows.Takeownership.Directory',
               ],';'),
-        icon         => 'imageres.dll,-5323'
+        icon         => 'imageres.dll,-5323',
+        position     => 'middle',
+      }}
+    }
+    registryx::class {
+      ['HKCR\\Drive', 'HKCR\\Drive\\Background']:
+      shell => {'Administration' => {
+        sub_commands => join($reg_admin_menu_dir_and_drive+[
+                'Windows.Takeownership.Drive',
+              ],';'),
+        icon         => 'imageres.dll,-5323',
+        position     => 'middle',
       }}
     }
     registryx::class { 'HKCR\\*':
@@ -510,7 +544,8 @@ class setup_win {
         sub_commands => join([
                 'Windows.Takeownership.File',
               ],';'),
-        icon         => 'imageres.dll,-5323'
+        icon         => 'imageres.dll,-5323',
+        position     => 'middle',
       }}
     }
     registry_key {[
@@ -555,8 +590,8 @@ class setup_win {
     name_or_ref    => 'Scalable Vector Graphics (SVG)',
     default_icon   => "${icons}\\svgfile.ico",
   }
-  registryx::class { 'HKCR\\.svg' : 
-    name_or_ref        => 'svgfile',
+  registryx::class { 'HKCR\\.svg' :
+    name_or_ref    => 'svgfile',
     content_type   => 'image/svg+xml',
     perceived_type => 'image',
   }
@@ -705,34 +740,38 @@ class setup_win {
   ###################################### Regedit Tweaks ################################################################
   ######################################################################################################################
   if $is_my_user {
-    $hkcu_regfav = "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites"
-    registry_key {"${hkcu_regfav}": ensure => present, purge_values => true }
-    registry_value {
-      "${hkcu_regfav}\\App Paths":   data => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths';
-      "${hkcu_regfav}\\Autorun (S)": data => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run';
-      "${hkcu_regfav}\\Autorun (U)": data => 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
-      "${hkcu_regfav}\\EnvVars (S)": data => 'HKLM\\SYSTEM\\ControlSet001\\Control\\Session Manager\\Environment';
-      "${hkcu_regfav}\\EnvVars (U)": data => 'HKCU\\Environment';
-      "${hkcu_regfav}\\Files: All": data => 'HKCR\\AllFilesystemObjects';
-      "${hkcu_regfav}\\Files: Apps": data => 'HKCR\\Applications';
-      "${hkcu_regfav}\\Files: Unknown": data => 'HKCR\\Unknown';
-      "${hkcu_regfav}\\Files: MIME Types": data => 'HKCR\\MIME\\Database\\Content Type';
-      "${hkcu_regfav}\\Files: Open With": data => 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts';
-      "${hkcu_regfav}\\Files: PerceivedType": data => 'HKCR\\SystemFileAssociations';
-      "${hkcu_regfav}\\Files: Links": data => 'HKCR\\CLSID\\{00021401-0000-0000-C000-000000000046}';
-      "${hkcu_regfav}\\Firewall Rules": data => 'HKLM\\SYSTEM\\ControlSet001\\services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules';
-      "${hkcu_regfav}\\MUICache": data => 'HKCU\\Software\\Classes\\Local Settings\\MuiCache';
-      "${hkcu_regfav}\\Network Adapters": data => 'HKCR\\CLSID\\{7007ACC7-3202-11D1-AAD2-00805FC1270E}';
-      "${hkcu_regfav}\\Reg: Favorites": data => 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites';
-      "${hkcu_regfav}\\Services": data => 'HKLM\\SYSTEM\\CurrentControlSet\\Services';
-      "${hkcu_regfav}\\Sh: Browser Helper Objects": data => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Browser Helper Objects';
-      "${hkcu_regfav}\\Sh: CommandStore (S)": data => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore';
-      "${hkcu_regfav}\\Sh: DriveIcons": data => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons';
-      "${hkcu_regfav}\\Sh: Folders (S)": data => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders';
-      "${hkcu_regfav}\\Sh: Folders (U)": data => 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders';
-      "${hkcu_regfav}\\Sh: Icons": data => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Icons';
-      "${hkcu_regfav}\\Sh: OverlayIcons(-ID)": data => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers';
+    $regedit_fav = {
+      'App Paths (S)'         => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths',
+      'Autorun (S)'           => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run',
+      'Autorun (U)'           => 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+      'EnvVars (S)'           => 'HKLM\\SYSTEM\\ControlSet001\\Control\\Session Manager\\Environment',
+      'EnvVars (U)'           => 'HKCU\\Environment',
+      'Sh: *'                 => 'HKCR\\*',
+      'Sh: All'               => 'HKCR\\AllFilesystemObjects',
+      'Sh: Apps'              => 'HKCR\\Applications',
+      'Sh: Directory'         => 'HKCR\\Directory',
+      'Sh: Drive'             => 'HKCR\\Drive',
+      'Sh: DriveIcons (S)'    => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons',
+      'Sh: Folder'            => 'HKCR\\Folder',
+      'Sh: Links'             => 'HKCR\\CLSID\\{00021401-0000-0000-C000-000000000046}',
+      'Sh: Network Adapters'  => 'HKCR\\CLSID\\{7007ACC7-3202-11D1-AAD2-00805FC1270E}',
+      'Sh: Unknown'           => 'HKCR\\Unknown',
+      'Sh: CommandStore (S)'  => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore',
+      'Sh: MIME Types'        => 'HKCR\\MIME\\Database\\Content Type',
+      'Sh: MUICache'          => 'HKCU\\Software\\Classes\\Local Settings\\MuiCache',
+      'Sh: Open With'         => 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts',
+      'Sh: OverlayIcons (S)'  => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers',
+      'Sh: SystemFileAssociations/PerceivedTypes'    => 'HKCR\\SystemFileAssociations',
+      'Sh: Shell Folders (S)' => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders',
+      'Sh: Shell Folders (U)' => 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders',
+      'Sh: Shell Icons (S)'   => 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Icons',
+      'Firewall Rules (S)'    => 'HKLM\\SYSTEM\\ControlSet001\\services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules',
+      'Services (S)'          => 'HKLM\\SYSTEM\\CurrentControlSet\\Services',
+
     }
+    $hkcu_regfav = "${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Applets\\Regedit\\Favorites"
+    registry_key {$hkcu_regfav: ensure => present, purge_values => true }
+    $regedit_fav.each |String $key, String $value| { registry_value {"${hkcu_regfav}\\${key}": data => $value } }
   }
 
   ######################################################################################################################

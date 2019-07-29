@@ -34,22 +34,11 @@ define registryx::class (
     registry_value { "${reg_root}\\defaulticon\\": data => $default_icon }
   }
 
-  if $associated_by != undef {
-    $associated_by_real = $associated_by ? {
-      String        => [$associated_by],
-      Array[String] => $associated_by,
-    }
-    $associated_by_real.each |String $value| {
-      $reg_assoc_root="HKCR\\${value}"
-      registry_key   { $reg_assoc_root: ensure => present }
-      registry_value { "${reg_assoc_root}\\": data => $name }
-      if $content_type != undef {
-        registry_value { "${reg_assoc_root}\\Content Type": data => $content_type }
-      }
-      if $perceived_type != undef {
-        registry_value { "${reg_assoc_root}\\PerceivedType": data => $perceived_type }
-      }
-    }
+  if $content_type != undef {
+    registry_value { "${reg_root}\\Content Type": data => $content_type }
+  }
+  if $perceived_type != undef {
+    registry_value { "${reg_root}\\PerceivedType": data => $perceived_type }
   }
 
   if $shell != undef {
