@@ -583,16 +583,16 @@ class win_reg_adjustments ( SetupProfile $profile ) {
     }
 
     # manage elements at 'This PC'
-    registryx::this_pc_namespace {
-      '{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}': ensure => 'hidden';  # 3D
-      '{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}': ensure => 'present'; # Desktop
-      '{f42ee2d3-909f-4907-8871-4c22fc0bf756}': ensure => 'hidden';  # Documents
-      '{374DE290-123F-4565-9164-39C4925E467B}': ensure => 'present'; # Downloads
-      '{1CF1260C-4DD0-4ebb-811F-33C572699FDE}': ensure => 'present'; # Music
-      '{0ddd015d-b06c-45d5-8c4c-f59713854639}': ensure => 'hidden';  # Pictures
-      '{645FF040-5081-101B-9F08-00AA002F954E}': ensure => 'present'; # Recycling Bin
-      '{35286a68-3c57-41a1-bbb1-0eae73d76c95}': ensure => 'hidden';  # Videos
-    }
+    # registryx::this_pc_namespace {
+    #   '{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}': ensure => 'absent';  # 3D
+    #   #'{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}': ensure => 'present'; # Desktop -> diabled because of issue: folders not renamable
+    #   '{f42ee2d3-909f-4907-8871-4c22fc0bf756}': ensure => 'absent';  # Documents
+    #   '{374DE290-123F-4565-9164-39C4925E467B}': ensure => 'present'; # Downloads
+    #   '{1CF1260C-4DD0-4ebb-811F-33C572699FDE}': ensure => 'present'; # Music
+    #   '{0ddd015d-b06c-45d5-8c4c-f59713854639}': ensure => 'absent';  # Pictures
+    #   '{645FF040-5081-101B-9F08-00AA002F954E}': ensure => 'present'; # Recycling Bin
+    #   '{35286a68-3c57-41a1-bbb1-0eae73d76c95}': ensure => 'present';  # Videos
+    # }
 
     # Windows Explorer start to This PC
     registry_value {
