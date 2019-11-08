@@ -32,6 +32,9 @@ class setup_win {
   #     registry_key { $key: }
   #   }
 
+  # add option to move user directory to d: drive
+  # https://www.sevenforums.com/tutorials/87555-user-profile-change-default-location.html
+
   # https://librarian-puppet.com/
 
   # https://forge.puppet.com/puppetlabs/scheduled_task
@@ -57,26 +60,36 @@ class setup_win {
 
   $username   = $::identity['user']
   $is_my_pc   = 'borck' in downcase($::hostname)
+  $is_my_stationary_pc   = $is_my_pc and 'PC' in downcase($::hostname)
   $is_at_pc   = $::hostname =~ /^AT\d+$/
   $is_my_user = '\\borck' in downcase($username)
+  $is_render_pc = $is_my_stationary_pc or $is_at_pc
+
+  # $test = hiera('packages')
+  # into($test)
 
   $profile = {
     office               => true,
     office_advanced      => $is_my_user,
     office_latex         => $is_my_pc or $is_at_pc,
-    office_365proplus    => $is_my_pc,
+    office_365proplus    => false,
     media                => $is_my_pc,
-    administration       => $is_my_user,
+    administration       => $is_my_user or $is_my_pc,
     browser_firefox      => $is_my_user,
     browser_chrome       => false,
     browser_opera        => false,
     dev                  => $is_my_user,
     dev_dotnet           => $is_my_user,
+    dev_vs2017enterprise => false,
+    dev_vs2017community  => false,
+    dev_vs2019enterprise => $is_my_user,
+    dev_vs2019community  => false,
     dev_java             => false,
     dev_python           => $is_my_user,
     dev_microcontroller  => $is_my_pc,
-    unity                => $is_at_pc,
-    blender              => false,
+    dev3d_unity          => $is_render_pc,
+    dev3d_blender        => $is_render_pc,
+    dev3d_humanoid       => $is_render_pc,
     driver_tools         => $is_my_pc,
     driver_logitech_io   => $is_my_pc,
     workflow             => $is_my_user,
@@ -87,31 +100,44 @@ class setup_win {
   include chocolatey
   Package { provider => chocolatey, ensure => present }
 
+
+  info("Apply profile:\n${profile}")
+
   class {'packages':             profile => $profile }
   class { 'win_reg_adjustments': profile => $profile }
+  ensure_exe_tile {'C:\\Program Files\\Blender Foundation\\Blender\\blender.exe':
+    logo_small      => 'Blender_small.png',
+    logo_medium     => 'Blender_medium.png',
+    foreground_text => 'light'
+  }
 }
 
 
 type SetupProfile = Struct[{
   Optional[office] => Boolean,
-  Optional[office_advanced]     => Boolean,
-  Optional[office_latex]        => Boolean,
-  Optional[office_365proplus]   => Boolean,
-  Optional[media]               => Boolean,
-  Optional[administration]      => Boolean,
-  Optional[browser_firefox]     => Boolean,
-  Optional[browser_chrome]      => Boolean,
-  Optional[browser_opera]       => Boolean,
-  Optional[dev]                 => Boolean,
-  Optional[dev_dotnet]          => Boolean,
-  Optional[dev_java]            => Boolean,
-  Optional[dev_python]          => Boolean,
-  Optional[dev_microcontroller] => Boolean,
-  Optional[unity]               => Boolean,
-  Optional[blender]             => Boolean,
-  Optional[driver_tools]        => Boolean,
-  Optional[driver_logitech_io]  => Boolean,
-  Optional[workflow]            => Boolean,
+  Optional[office_advanced]      => Boolean,
+  Optional[office_latex]         => Boolean,
+  Optional[office_365proplus]    => Boolean,
+  Optional[media]                => Boolean,
+  Optional[administration]       => Boolean,
+  Optional[browser_firefox]      => Boolean,
+  Optional[browser_chrome]       => Boolean,
+  Optional[browser_opera]        => Boolean,
+  Optional[dev]                  => Boolean,
+  Optional[dev_dotnet]           => Boolean,
+  Optional[dev_vs2017enterprise] => Boolean,
+  Optional[dev_vs2017community]  => Boolean,
+  Optional[dev_vs2019enterprise] => Boolean,
+  Optional[dev_vs2019community]  => Boolean,
+  Optional[dev_java]             => Boolean,
+  Optional[dev_python]           => Boolean,
+  Optional[dev_microcontroller]  => Boolean,
+  Optional[dev3d_unity]          => Boolean,
+  Optional[dev3d_blender]        => Boolean,
+  Optional[dev3d_humanoid]       => Boolean,
+  Optional[driver_tools]         => Boolean,
+  Optional[driver_logitech_io]   => Boolean,
+  Optional[workflow]             => Boolean,
 }]
 
 
@@ -124,8 +150,16 @@ class packages( SetupProfile $profile ) {
   # https://chocolatey.org/
 
   $packages = {
+    #This package creates a Windows Scheduled Task to run Choco-Cleaner.ps1 every Sunday at 11:00 PM.
+    'choco-cleaner'                            => { profile => ['administration', 'office', 'office_advanced', 'dev', 'media', 'workflow'] },
+    'chocolatey-toast-notifications.extension' => { profile => ['administration'] }, # , 'office', 'office_advanced', 'dev', 'media', 'workflow'
+    'chocolatey-preinstaller-checks.extension' => { profile => ['administration', 'office', 'office_advanced', 'dev', 'media', 'workflow'] },
+
     ### office/browser ################
-    'firefox'       => { profile => 'browser_firefox', upgrade => false }, #silent update
+    'firefox'       => {
+      profile         => 'browser_firefox',
+      install_options => ['--params', '"/DesktopShortcut=false"'],
+      upgrade         => false }, #silent update
     'googlechrome'  => { profile => 'browser_chrome', upgrade => false }, #silent update
     'opera'         => { profile => 'browser_opera', upgrade => false }, #silent update
 
@@ -134,7 +168,7 @@ class packages( SetupProfile $profile ) {
 
     # index PDF documents using Microsoft indexing clients, allows the user to easily search for text in PDF
     # TODO if $::architecture == 'x64' {}
-    'adobereader'    => { profile => 'office', upgrade => false },
+    #'adobereader'    => { profile => 'office', upgrade => false }, #use default PDF viewer or install own
     'pdf-ifilter-64' => { profile => 'office' },
 
     'office365proplus' => { profile => 'office_365proplus', upgrade => false },
@@ -148,7 +182,7 @@ class packages( SetupProfile $profile ) {
     'sketchup'     => { profile => ['office_advanced', 'dev'] }, # sketchup 2017, last free version
     'capture2text' => { profile => 'office_advanced' },
     'screentogif'  => { profile => 'office_advanced' }, #screenshot animation
-    'jcpicker'     => { profile => 'office_advanced' }, #installer not working (since 20190605)
+    #'jcpicker'     => { profile => 'office_advanced' }, #installer not working (since 20190605)
 
     'miktex'       => { profile => 'office_latex' },
     'texstudio'    => { profile => 'office_latex', upgrade => false },
@@ -182,12 +216,13 @@ class packages( SetupProfile $profile ) {
       postprocess     => 'pkgpost_vscode'
     },
 
-    'bulkrenameutility'   => { profile => ['office_advanced', 'administation', 'dev'], postprocess => 'pkgpost_bulkrenameutility' },
-    'lockhunter'          => { profile => ['office_advanced', 'administation', 'dev'] },
-    'dupeguru'            => { profile => ['administation', 'dev'] },
-    'windirstat'          => { profile => ['administation'] },
-    'runasdate'           => { profile => ['administration', 'dev'] },
-    'sandboxie'           => { profile => ['administration', 'dev'] },
+    'bulkrenameutility'     => { profile => ['office_advanced', 'administation', 'dev'], postprocess => 'pkgpost_bulkrenameutility' },
+    'lockhunter'            => { profile => ['office_advanced', 'administation', 'dev'] },
+    'dupeguru'              => { profile => ['administation', 'dev'] },
+    'windirstat'            => { profile => ['administation'] },
+    'bulk-crap-uninstaller' => { profile => ['administation'] },
+    'runasdate'             => { profile => ['administration', 'dev'] },
+    'sandboxie'             => { profile => ['administration', 'dev'] },
 
     # network tools
     'curl'         => { profile => ['administration', 'dev'] },
@@ -213,35 +248,60 @@ class packages( SetupProfile $profile ) {
     'tortoisesvn' => { profile => ['dev'] },
     'sourcetree'  => { profile => ['dev'] },
 
-    'hxd'  => { profile => ['dev'] },
-    'make' => { profile => ['dev'] },
+    'hxd'    => { profile => ['dev'] },
+    'ghidra' => { profile => ['dev'], upgrade => false }, #A software reverse engineering (SRE) suite of tools developed by NSA's Research Directorate 
+    'make'   => { profile => ['dev'] },
 
     'python3' => { profile => ['dev_python'] },
 
     'arduino' => { profile => 'dev_microcontroller' }, # spy/browse the visual tree of a running WPF application ... and change properties
 
-    # dotnet
-    'visualstudio2017enterprise'                      => { profile => 'dev_dotnet', upgrade => false }, # to large for upgrade every time
-    'visualstudio2017-workload-data'                  => { profile => 'dev_dotnet', upgrade => false },
-    'visualstudio2017-workload-manageddesktop'        => { profile => 'dev_dotnet', upgrade => false },
-    'visualstudio2017-workload-nativecrossplat'       => { profile => 'dev_dotnet', upgrade => false },
-    'visualstudio2017-workload-nativedesktop'         => { profile => 'dev_dotnet', upgrade => false },
-    'visualstudio2017-workload-netcoretools'          => { profile => 'dev_dotnet', upgrade => false },
-    #'visualstudio2017-workload-universal'            => { profile => 'dev_dotnet', upgrade => false },
-    'visualstudio2017-workload-vctools'               => { profile => 'dev_dotnet', upgrade => false },
-    'visualstudio2017-workload-visualstudioextension' => { profile => 'dev_dotnet', upgrade => false },
-    'resharper-ultimate-all'                          => { profile => 'dev_dotnet' }, #TODO require_packages => 'visualstudio2017enterprise'
-    'snoop' => { profile => 'dev_dotnet' }, # spy/browse the visual tree of a running WPF application ... and change properties
+    # vs2017
+    'visualstudio2017enterprise'                      => { profile => 'dev_vs2017enterprise', upgrade => false }, # to large for upgrade every time
+    'visualstudio2017community'                       => { profile => 'dev_vs2017community', upgrade => false }, # to large for upgrade every time
+    'visualstudio2017-workload-data'                  => { profile => ['dev_vs2017enterprise', 'dev_vs2017community'], upgrade => false },
+    'visualstudio2017-workload-manageddesktop'        => { profile => ['dev_vs2017enterprise', 'dev_vs2017community'], upgrade => false },
+    'visualstudio2017-workload-nativecrossplat'       => { profile => ['dev_vs2017enterprise', 'dev_vs2017community'], upgrade => false },
+    'visualstudio2017-workload-nativedesktop'         => { profile => ['dev_vs2017enterprise', 'dev_vs2017community'], upgrade => false },
+    'visualstudio2017-workload-netcoretools'          => { profile => ['dev_vs2017enterprise', 'dev_vs2017community'], upgrade => false },
+    #'visualstudio2017-workload-universal'            => { profile => ['dev_vs2017enterprise', 'dev_vs2017community'], upgrade => false },
+    'visualstudio2017-workload-vctools'               => { profile => ['dev_vs2017enterprise', 'dev_vs2017community'], upgrade => false },
+    'visualstudio2017-workload-visualstudioextension' => { profile => ['dev_vs2017enterprise', 'dev_vs2017community'], upgrade => false },
+    'visualstudio2017-workload-managedgame'           => { profile => 'dev_vs2017enterprise', upgrade => false },#TODO require_packages => 'dev3d_unity'
 
-    #unity
-    'unity'                                 => { profile => 'unity', upgrade => false },
-    'unity-standard-assets'                 => { profile => 'unity', upgrade => false },
-    'visualstudio2017-workload-managedgame' => { profile => 'unity', upgrade => false },#TODO require_packages => 'visualstudio2017enterprise'
+    # vs2019
+    'visualstudio2019enterprise'                      => { profile => 'dev_vs2019enterprise', upgrade => false }, # to large for upgrade every time
+    'visualstudio2019community'                       => { profile => 'dev_vs2019community', upgrade => false }, # to large for upgrade every time
+    'visualstudio2019-workload-data'                  => { profile => ['dev_vs2019enterprise', 'dev_vs2019community'], upgrade => false },
+    'visualstudio2019-workload-manageddesktop'        => { profile => ['dev_vs2019enterprise', 'dev_vs2019community'], upgrade => false },
+    'visualstudio2019-workload-nativecrossplat'       => { profile => ['dev_vs2019enterprise', 'dev_vs2019community'], upgrade => false },
+    'visualstudio2019-workload-nativedesktop'         => { profile => ['dev_vs2019enterprise', 'dev_vs2019community'], upgrade => false },
+    'visualstudio2019-workload-netcoretools'          => { profile => ['dev_vs2019enterprise', 'dev_vs2019community'], upgrade => false },
+    #'visualstudio2019-workload-universal'            => { profile => ['dev_vs2019enterprise', 'dev_vs2019community'], upgrade => false },
+    'visualstudio2019-workload-vctools'               => { profile => ['dev_vs2019enterprise', 'dev_vs2019community'], upgrade => false },
+    'visualstudio2019-workload-visualstudioextension' => { profile => ['dev_vs2019enterprise', 'dev_vs2019community'], upgrade => false },
+    'visualstudio2019-workload-managedgame'           => { profile => 'dev_vs2019enterprise', upgrade => false },#TODO require_packages => 'dev3d_unity'
+    #dotnet
+    'resharper-ultimate-all'   => { profile => [
+      'dev_vs2017enterprise',
+      'dev_vs2017community',
+      'dev_vs2019enterprise',
+      'dev_vs2019community'] },
+    'snoop' => { profile => 'dev_dotnet' }, # spy/browse the visual tree of a running WPF application ... and change properties
 
     #java
     'jdk8'    => { profile => 'dev_java', upgrade => false }, # upgrade may dumping your system, 20190628
     'eclipse' => { profile => 'dev_java' },
 
+
+    # 3D tools
+
+    'unity'                 => { profile => 'dev3d_unity', upgrade => false, postprocess => 'pkgpost_unity' },
+    'unity-hub'             => { profile => 'dev3d_unity', upgrade => false },
+    'unity-standard-assets' => { profile => 'dev3d_unity', upgrade => false },
+
+    'blender'                               => { profile => 'dev3d_blender', postprocess => 'pkgpost_blender' },
+    'makehuman'                             => { profile => 'dev3d_humanoid' },
 
     ### driver tools ############
 
@@ -256,7 +316,6 @@ class packages( SetupProfile $profile ) {
 
 
   $packages_filtered = $packages.filter|String $name, PackageSetup $setup|{
-    #$setup.profile ? { String => [$setup_profile], Array[String] => $setup_profile }
     $setup_profile = $setup['profile']
     $setup_profile ? {
       String        => $profile[$setup_profile],
@@ -267,8 +326,7 @@ class packages( SetupProfile $profile ) {
   }
 
   $packages_to_apply = join(($packages_filtered.map |$name,$setup| {$name}).sort,', ')
-  notice("Apply profile:\n${profile}")
-  notice("Apply packages:\n${packages_to_apply}")
+  info("This profile results to the following packages packages:\n${packages_to_apply}")
 
   $packages_filtered.each |String $name, PackageSetup $setup|{
     setup_package {$name: setup => $setup, profile => $profile}
@@ -316,6 +374,102 @@ define setup_package(PackageSetup $setup, SetupProfile $profile){
 }
 
 
+
+# Customize Start screen tiles for desktop apps
+# 
+# Documentation:
+# https://docs.microsoft.com/en-us/previous-versions/windows/apps/dn393983(v=win.10)?redirectedfrom=MSDN
+#
+#
+# <VisualElements ShowNameOnSquare150x150Logo="on" Square150x150Logo="VisualElements\MediumIconUnity.png" Square70x70Logo="VisualElements\SmallIconUnity.png" ForegroundText="light" BackgroundColor="#0078D7" />
+define ensure_exe_tile(
+  String                                  $logo_small,
+  String                                  $logo_medium,
+  Optional[Enum['light', 'dark', 'none']] $foreground_text  = 'light',
+  Optional[Integer]                       $background_color = undef,
+  String                                  $tile_subdir      = 'VisualElements'
+  ){
+
+  # matches files ($1: directory, $2: filename, $3: filename without extension, $4: extension)
+  # TODO: does not match C:\atg.exe
+  if $name =~ /^([a-zA-Z]:(?:\\(?![<>:"\/\\|?*])).*)\\(((?![<>:"\/\\|?*]).*)\.((?![<>:"\/\\|?*]).*))$/ {
+    $exe_dir  = $1
+    $exe_name_without_ext = $3
+
+    # TODO ensure exe exists 
+
+    $tiles = [ $logo_small, $logo_medium ]
+
+    $visual_element_args = delete_undef_values({
+      'Square70x70Logo'             => "${tile_subdir}/${logo_small}",
+      'Square150x150Logo'           => "${tile_subdir}/${logo_medium}",
+      'ShowNameOnSquare150x150Logo' => $foreground_text ? {'none' => 'off', undef => undef, default => 'on'},
+      'ForegroundText'              => $foreground_text ? {'none' => undef, default => $foreground_text},
+      'BackgroundColor'             => $background_color ? {undef => undef, default => '#%06X' % $background_color},
+      # https://stackoverflow.com/questions/84421/converting-an-integer-to-a-hexadecimal-string-in-ruby
+    })
+    $exe_tile_dir = "${$exe_dir}/${tile_subdir}"
+    $class_exe_tile_dir = "tile directory ${exe_tile_dir}"
+    file { $class_exe_tile_dir: ensure => directory, path => $exe_tile_dir }
+    $tiles.filter| $tile | {$tile.is_a(String)}
+          .unique
+          .each|String $tile|{
+            info("apply tile ${tile}")
+            file { "tile ${tile}":
+              ensure             => present,
+              path               => "${exe_tile_dir}/${tile}",
+              source             => "puppet:///modules/resources/tile/${tile}",
+              source_permissions => ignore,
+              require            => File[$class_exe_tile_dir],
+              notify             => Refresh_lnks_by_target_all[$name]
+            }
+    }
+
+    $manifest = "${exe_dir}/${exe_name_without_ext}.VisualElementsManifest.xml"
+
+    file { $manifest:
+      ensure  => present,
+      replace => false,
+      path    => $manifest,
+      source  => 'puppet:///modules/resources/tile/_template.VisualElementsManifest.xml',
+      notify  => Refresh_lnks_by_target_all[$name]
+    }
+    -> xml_fragment { "${manifest}/Application":
+      ensure  => present,
+      path    => $manifest,
+      xpath   => '/Application',
+      content => { attributes => { 'GeneratedByPuppet' => true }},
+      notify  => Refresh_lnks_by_target_all[$name]
+    }
+    -> xml_fragment { "${manifest}/Application/VisualElements":
+      ensure  => 'present',
+      path    => $manifest,
+      xpath   => '/Application/VisualElements',
+      content => { attributes => $visual_element_args},
+      notify  => Refresh_lnks_by_target_all[$name]
+    }
+
+
+    # TODO refresh lnk file using powershell
+    # https://stackoverflow.com/questions/40738969/securely-passing-parameters-to-powershell-scripts-executed-with-puppet
+    refresh_lnks_by_target_all{$name:}
+  } else {
+    warning("Can not apply tiles to the application: ${name}")
+  }
+}
+
+define refresh_lnks_by_target_all(String $targets = $name) {
+  refresh_lnks_by_target{"(user) ${targets}": targets => $targets, user => true}
+  refresh_lnks_by_target{"(system) ${targets}": targets => $targets, user => false}
+}
+define refresh_lnks_by_target(String $targets = $name, Boolean $user) {
+  exec { "refresh_lnks_by_target (user: ${user}) ${targets}":
+    command   => template('system_env/refresh_lnk_by_target.ps1.epp'),
+    provider  => powershell,
+    logoutput => true,
+    refreshonly => true,
+  }
+}
 ########################################################################################################################
 ###################################### Package Post Processing #########################################################
 ########################################################################################################################
@@ -377,6 +531,11 @@ class pkgpost_git( SetupProfile $profile ) {
 
 class pkgpost_logitech_options( SetupProfile $profile ) {
   registry_value { 'HKLM\\SOFTWARE\\Logitech\\LogiOptions\\Analytics\\Enabled': data => '0' }
+  registry_value { 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run\\Logitech Download Assistant':
+    type => binary, data => '03 00 00 00 C9 10 E8 40 38 8B D5 01'}
+  registry_value { 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run\\LogiOptions':
+    type => binary, data => '03 00 00 00 DC 31 B4 6B 3E 8B D5 01'}
+
   xml_fragment { 'logitech-options_disable_non_silent_update_wizard':
     ensure  => 'present',
     path    => "${::windows_env['PROGRAMDATA']}/Logishrd/LogiOptions/Software/Current/options.xml",
@@ -412,7 +571,7 @@ class pkgpost_inkscape( SetupProfile $profile ) {
     $inkscape_reg_convertermenu = 'Applications\\inkscape.exe\\ContextMenus\\converters'
     registryx::class { 'HKCR\\Applications\\inkscape.exe':
       shell   => {
-        'open'        => {command => "\"${inkscape}\", \"%1\"", icon => "\"${inkscape}\", 0"},
+        'open'        => {command => "\"${inkscape}\" \"%1\"", icon => "\"${inkscape}\", 0"},
         'convertmenu' => {name_or_ref => 'Convert', extended_sub_commands_key => $inkscape_reg_convertermenu}
       },
     }
@@ -434,7 +593,7 @@ class pkgpost_caesium( SetupProfile $profile ) {
     file { "${startmenu_all}\\Caesium\\Caesium.lnk": ensure  => absent, }
     file { "${startmenu_all}\\Caesium\\Caesium - Image Converter.lnk":
       ensure => present,
-      source => "puppet:///modules/windows_tool_helper/caesium/Caesium_${::architecture}.lnk",
+      source => "puppet:///modules/resources/lnk/Caesium_${::architecture}.lnk",
     }
   }
 }
@@ -463,7 +622,21 @@ class pkgpost_sevenzip( SetupProfile $profile ) {
   }
 }
 
+class pkgpost_unity( SetupProfile $profile ) {
+  ensure_exe_tile {'C:\\Program Files\\Unity\\Editor\\Unity.exe':
+    logo_small      => 'Unity_small.png',
+    logo_medium     => 'Unity_medium.png',
+    foreground_text => 'light'
+  }
+}
 
+class pkgpost_blender( SetupProfile $profile) {
+  ensure_exe_tile {'"C:\\Program Files\\Blender Foundation\\Blender\\blender.exe"':
+    logo_small      => 'Blender_small.png',
+    logo_medium     => 'Blender_medium.png',
+    foreground_text => 'light'
+  }
+}
 
 ########################################################################################################################
 ###################################### System Adjustments ##############################################################
@@ -492,9 +665,10 @@ class icons {
   file { 'Icons.puppet':
     ensure             => present,
     path               => "${::windows_env['SYSTEMROOT']}\\Icons.puppet",
-    source             => 'puppet:///modules/icons',
+    source             => 'puppet:///modules/resources/ico',
     source_permissions => ignore,
     recurse            => true,
+    force              => true,
     purge              => true,
   }
 }
@@ -507,6 +681,7 @@ class win_reg_adjustments ( SetupProfile $profile ) {
   $hkcu = "HKU\\${::identity_win['sid']}"
   $localappdata = $::windows_env['LOCALAPPDATA']
 
+  # TODO $is_dev = $profile.any key is 'dev' or starts with 'dev_' is set to true
   $is_dev      = $profile['dev'] == true
   $is_admin    = $profile['administration'] == true
   $is_media    = $profile['media'] == true
@@ -516,7 +691,11 @@ class win_reg_adjustments ( SetupProfile $profile ) {
   if $is_dev or $is_admin {
     include reg_admin_context_menu
 
-    # for powershell scripts (*.ps1): add 'Run as administrator' to context menu
+    # CMD: set font Consolas to fix scaling issues
+    registry_value {"${hkcu}\\Console\\%SystemRoot%_System32_cmd.exe\\FaceName": type => string, data => 'Consolas'}
+    #may changing here: HKLM\System\CurrentControlSet\Services\bam\State\UserSettings\S-1-5-21-1523512219-82476422-3388066983-1001\\Device\HarddiskVolume2\Windows\System32\conhost.exe
+
+    # Powershell scripts (*.ps1): add 'Run as administrator' to context menu
     registryx::shell_command{ 'HKCR\\Microsoft.PowerShellScript.1\\shell\\runas':
       command        => 'powershell.exe "-Command" "if((Get-ExecutionPolicy ) -ne \'AllSigned\') { Set-ExecutionPolicy -Scope Process Bypass }; & \'%1\'"',
       mui_verb       => '@shell32.dll,-37448',
@@ -577,22 +756,18 @@ class win_reg_adjustments ( SetupProfile $profile ) {
       install_options => ['--params', '"/AllIcons:NO"'],
     }
 
+    #add 'Recycling Bin' to 'This PC'
+    registry_key {"${hkcu}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MyComputer\\NameSpace\\{645FF040-5081-101B-9F08-00AA002F954E}": ensure => present}
+
     package { 'taskbar-winconfig':
       ensure          => present,
       install_options => ['--params', '"\'/LOCKED:yes', '/COMBINED:yes', '/PEOPLE:no', '/TASKVIEW:no', '/STORE:no', '/CORTANA:no\'"'],
     }
 
     # manage elements at 'This PC'
-    # registryx::this_pc_namespace {
-    #   '{0DB7E03F-FC29-4DC6-9020-FF41B59E513A}': ensure => 'absent';  # 3D
-    #   #'{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}': ensure => 'present'; # Desktop -> diabled because of issue: folders not renamable
-    #   '{f42ee2d3-909f-4907-8871-4c22fc0bf756}': ensure => 'absent';  # Documents
-    #   '{374DE290-123F-4565-9164-39C4925E467B}': ensure => 'present'; # Downloads
-    #   '{1CF1260C-4DD0-4ebb-811F-33C572699FDE}': ensure => 'present'; # Music
-    #   '{0ddd015d-b06c-45d5-8c4c-f59713854639}': ensure => 'absent';  # Pictures
-    #   '{645FF040-5081-101B-9F08-00AA002F954E}': ensure => 'present'; # Recycling Bin
-    #   '{35286a68-3c57-41a1-bbb1-0eae73d76c95}': ensure => 'present';  # Videos
-    # }
+    registryx::this_pc_folder {
+      ['Music', 'Pictures', 'Videos']: ensure => ($is_media or !$is_dev) ? {true => present, false => absent };
+    }
 
     # Windows Explorer start to This PC
     registry_value {
@@ -790,7 +965,7 @@ class puppet_conf{
 
   # display current value: puppet agent --configprint runinterval
   ini_setting { 'pp_runinterval':
-    ensure  => present, path => $pp_conf, section => 'agent', setting => 'runinterval', value   => '1d',
+    ensure  => present, path => $pp_conf, section => 'agent', setting => 'runinterval', value   => '30m',
   }
   ini_setting { 'pp_runtimeout':
     ensure  => present, path => $pp_conf, section => 'agent', setting => 'runtimeout', value   => '12h',
@@ -862,7 +1037,7 @@ node default {
     fail("Unsupported OS ${::operatingsystem}")
   }
   include puppet_conf
-  
+
   include setup_win
 }
 

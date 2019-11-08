@@ -1,0 +1,28 @@
+[String] $targets = '<%= @targets %>'
+[Bool] $user = $<%= @user %>
+
+function Get-StartmenuShortcutsUser ([System.Collections.Generic.HashSet[string]] $targets, [bool] $user){
+  $StartMenuPath = If ($user) {
+    "$Env:APPDATA\Microsoft\Windows\Start Menu\Programs"
+  } Else {
+    "$Env:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs"
+  }
+  $Shortcuts = Get-ChildItem -Recurse "$StartMenuPath" -Include *.lnk
+  $Shell = New-Object -ComObject WScript.Shell
+  foreach ($Shortcut in $Shortcuts)
+  {
+    $TargetPath = $Shell.CreateShortcut($Shortcut).targetpath;
+    if ($targets.Contains($TargetPath)) {
+      $lnkPath = $Shortcut.FullName
+      (ls $lnkPath).lastwritetime = get-date
+      Write-Host "Updated write time of $lnkPath"
+    }
+  }
+  [Runtime.InteropServices.Marshal]::ReleaseComObject($Shell) | Out-Null
+}
+
+$targetSet = New-Object System.Collections.Generic.HashSet[string] (,$targets.split(';'))
+Write-Host $targetSet
+Get-StartmenuShortcutsUser $targetSet $user
+#Write-Host $Output
+#$Output | Out-GridView
