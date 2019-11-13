@@ -105,11 +105,6 @@ class setup_win {
 
   class {'packages':             profile => $profile }
   class { 'win_reg_adjustments': profile => $profile }
-  ensure_exe_tile {'C:\\Program Files\\Blender Foundation\\Blender\\blender.exe':
-    logo_small      => 'Blender_small.png',
-    logo_medium     => 'Blender_medium.png',
-    foreground_text => 'light'
-  }
 }
 
 
@@ -253,7 +248,10 @@ class packages( SetupProfile $profile ) {
     'make'   => { profile => ['dev'] },
 
     'python3' => { profile => ['dev_python'] },
-
+    'anaconda3' => { profile => ['dev_python'], install_options => ['--params="/AddToPath', '/D:c:\\Program', 'Files"'] },
+    #['--params=\'"/AddToPath', "/D:${::windows_env['PROGRAMFILES']}\"\'"], },
+    # --params '"/AddToPath /D:c:\MyTools"'
+    # --params="'/serverinstance:MyServer /buildtype:OTP'"
     'arduino' => { profile => 'dev_microcontroller' }, # spy/browse the visual tree of a running WPF application ... and change properties
 
     # vs2017
@@ -290,6 +288,7 @@ class packages( SetupProfile $profile ) {
     'snoop' => { profile => 'dev_dotnet' }, # spy/browse the visual tree of a running WPF application ... and change properties
 
     #java
+    #choco pin add -n=jdk8
     'jdk8'    => { profile => 'dev_java', upgrade => false }, # upgrade may dumping your system, 20190628
     'eclipse' => { profile => 'dev_java' },
 
@@ -692,7 +691,8 @@ class win_reg_adjustments ( SetupProfile $profile ) {
     include reg_admin_context_menu
 
     # CMD: set font Consolas to fix scaling issues
-    registry_value {"${hkcu}\\Console\\%SystemRoot%_System32_cmd.exe\\FaceName": type => string, data => 'Consolas'}
+    #TODO: check if "${hkcu}\\Console\\%SystemRoot%_System32_cmd.exe" exists
+    #registry_value {"${hkcu}\\Console\\%SystemRoot%_System32_cmd.exe\\FaceName": type => string, data => 'Consolas'}
     #may changing here: HKLM\System\CurrentControlSet\Services\bam\State\UserSettings\S-1-5-21-1523512219-82476422-3388066983-1001\\Device\HarddiskVolume2\Windows\System32\conhost.exe
 
     # Powershell scripts (*.ps1): add 'Run as administrator' to context menu
