@@ -1,0 +1,166 @@
+resources_win_packages: {
+  choco-cleaner :                            { profile : [administration, office, office_advanced, dev_basics, media, workflow] },
+  chocolatey-toast-notifications.extension : { profile : [administration] }, # , office, office_advanced, dev_basics, media, workflow
+  chocolatey-preinstaller-checks.extension : { profile : [administration, office, office_advanced, dev_basics, media, workflow] },
+
+  ### office/browser ################
+  firefox       : { profile : browser_firefox, install_options : ['--params', '"/DesktopShortcut=false"'], ensure : present }, #silent update
+  googlechrome  : { profile : browser_chrome, ensure : present }, #silent update
+  opera         : { profile : browser_opera, ensure : present }, #silent update
+
+  #EdgeDeflector: redirects URI to the default browser (caution: menu popup on install)
+  EdgeDeflector : { profile : [browser_firefox, browser_chrome, browser_opera] },
+
+  # index PDF documents using Microsoft indexing clients, allows the user to easily search for text in PDF
+  # TODO if $::architecture == x64 {}
+  #adobereader    : { profile : office, ensure : present }, #use default PDF viewer or install own
+  pdf-ifilter-64 : { profile : office },
+
+  office365proplus : { profile : office_365proplus, ensure : present },
+
+  7zip           : { profile : office, postprocess : pkgpost_sevenzip },
+
+  ### office advanced #########
+  trid         : { profile : [administration, office_advanced, dev] }, # identify file types from their binary signatures
+  inkscape     : { profile : office_advanced, postprocess : pkgpost_inkscape },
+  yed          : { profile : [office_advanced, dev_basics] },
+  sketchup     : { profile : [office_advanced, dev_basics] }, # sketchup 2017, last free version
+  capture2text : { profile : office_advanced },
+  screentogif  : { profile : office_advanced }, #screenshot animation
+  #jcpicker     : { profile : office_advanced }, #installer not working (since 20190605)
+
+  miktex       : { profile : office_latex },
+  texstudio    : { profile : office_latex, ensure : present },
+  jabref       : { profile : office_latex, ensure : present },
+
+
+  ### media ############
+
+  vlc             : { profile : [office, media, dev_basics], postprocess : pkgpost_vlc },
+  handbrake       : { profile : media }, # video converter
+  mkvtoolnix      : { profile : media }, # mkv tools
+  caesium.install : { profile : media, postprocess : pkgpost_caesium }, # image converter
+  picard          : { profile : media }, # MusicBrainz Picard, music tags online grabber, requires vcredist2008
+  mp3tag          : {
+    profile         : media,
+    install_options : ["--package-parameters='\"/NoDesktopShortcut", "/NoContextMenu\"'"],
+    postprocess     : pkgpost_mp3tag
+  },
+  audacity-lame   : { profile : [media, dev_basics] },
+  audacity        : { profile : [media, dev_basics] },
+
+  calibre         : { profile : media }, # convert any file to ebook'
+
+
+  ### dev/administation ############
+
+  vscode : {
+    profile         : [administration, dev_basics],
+    ensure          : present, #has a integrated semi silent upgrader
+    install_options : ['--params', '"/NoDesktopIcon', '/NoQuicklaunchIcon"'],
+    postprocess     : pkgpost_vscode
+  },
+
+  bulkrenameutility     : { profile : [office_advanced, administation, dev_basics], postprocess : pkgpost_bulkrenameutility },
+  lockhunter            : { profile : [office_advanced, administation, dev_basics] },
+  dupeguru              : { profile : [administation, dev_basics] },
+  windirstat            : { profile : [administation] },
+  bulk-crap-uninstaller : { profile : [administation] },
+  runasdate             : { profile : [administration, dev_basics] },
+  sandboxie             : { profile : [administration, dev_basics] },
+
+  pdk : { profile : [admin_puppet] },
+
+  # network tools
+  curl         : { profile : [administration, dev_basics] },
+  wget         : { profile : [administration, dev_basics] },
+  putty        : { profile : [administration, dev_basics] },
+  winscp       : { profile : [administration, dev_basics] },
+  wireshark    : { profile : [administration, dev_basics] },
+  CloseTheDoor : { profile : administration }, # close tcp/udp ports
+
+  # image tools
+  etcher          : { profile : [administration, dev_basics] },
+  rufus           : { profile : [administration, dev_basics] },
+  win32diskimager : { profile : [administration, dev_basics] },
+
+  # system tools
+  bluescreenview : { profile : administration },
+  regfromapp     : { profile : administration },
+  Sysinternals   : { profile : administration },
+
+  # version control
+  git         : { profile : [dev_basics], postprocess : pkgpost_git },
+  tortoisegit : { profile : [dev_basics], ensure : present }, # upgrade may cause errors
+  tortoisesvn : { profile : [dev_basics] },
+  sourcetree  : { profile : [dev_basics] },
+
+  hxd    : { profile : [dev_basics] },
+  ghidra : { profile : [dev_basics], ensure : present }, #A software reverse engineering (SRE) suite of tools developed by NSA's Research Directorate 
+  make   : { profile : [dev_basics] },
+
+  python3 : { profile : [dev_python], ensure : absent },
+  anaconda3 : { profile : [dev_python], install_options : ['--params="/AddToPath', '/D:c:\\Program', 'Files"'] },
+  #['--params=\'"/AddToPath', "/D:${::windows_env['PROGRAMFILES']}\"\'"], },
+  # --params '"/AddToPath /D:c:\MyTools"'
+  # --params="'/serverinstance:MyServer /buildtype:OTP'"
+  arduino : { profile : dev_microcontroller, postprocessOnRefresh : pkgpost_arduino }, # spy/browse the visual tree of a running WPF application ... and change properties
+
+  # vs2017
+  visualstudio2017enterprise                      : { profile : dev_vs2017enterprise, ensure : present }, # to large for upgrade every time
+  visualstudio2017community                       : { profile : dev_vs2017community, ensure : present }, # to large for upgrade every time
+  visualstudio2017-workload-data                  : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
+  visualstudio2017-workload-manageddesktop        : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
+  visualstudio2017-workload-nativecrossplat       : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
+  visualstudio2017-workload-nativedesktop         : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
+  visualstudio2017-workload-netcoretools          : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
+  #visualstudio2017-workload-universal            : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
+  visualstudio2017-workload-vctools               : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
+  visualstudio2017-workload-visualstudioextension : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
+  visualstudio2017-workload-managedgame           : { profile : dev_vs2017enterprise, ensure : present }, #TODO require_packages : dev3d_unity
+
+  # vs2019
+  visualstudio2019enterprise                      : { profile : dev_vs2019enterprise, ensure : present }, # to large for upgrade every time
+  visualstudio2019community                       : { profile : dev_vs2019community, ensure : present }, # to large for upgrade every time
+  visualstudio2019-workload-data                  : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
+  visualstudio2019-workload-manageddesktop        : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
+  visualstudio2019-workload-nativecrossplat       : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
+  visualstudio2019-workload-nativedesktop         : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
+  visualstudio2019-workload-netcoretools          : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
+  #visualstudio2019-workload-universal            : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
+  visualstudio2019-workload-vctools               : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
+  visualstudio2019-workload-visualstudioextension : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
+  visualstudio2019-workload-managedgame           : { profile : dev_vs2019enterprise, ensure : present }, #TODO require_packages : dev3d_unity
+  
+  #dotnet
+  resharper-ultimate-all   : { profile : [
+    dev_vs2017enterprise,
+    dev_vs2017community,
+    dev_vs2019enterprise,
+    dev_vs2019community] },
+  snoop : { profile : dev_dotnet }, # spy/browse the visual tree of a running WPF application ... and change properties
+
+  #java
+  #choco pin add -n=jdk8
+  jdk8    : { profile : dev_java, ensure : present }, # upgrade may dumping your system, 20190628
+  eclipse : { profile : dev_java },
+
+
+  # 3D tools
+  unity                 : { profile : dev3d_unity, ensure : '2019.2.17', postprocessOnRefresh : pkgpost_unity },
+  unity-hub             : { profile : dev3d_unity, ensure : present, postprocessOnRefresh : pkgpost_unity_hub },
+  #'unity-standard-assets' : { profile : dev3d_unity, ensure : present },
+
+  blender                               : { profile : dev3d_blender, postprocessOnRefresh : pkgpost_blender },
+  makehuman                             : { profile : dev3d_humanoid },
+
+  ### driver tools ############
+
+  sdio             : { profile : driver_tools }, # Snappy Driver Installer Origin (open source)
+  logitech-options : { profile : driver_logitech_io, postprocess : pkgpost_logitech_options }, # Logitech Options software lets you customize your device settings
+
+
+  ### workflow ############
+
+  quicklook : { profile : [workflow], postprocess : pkgpost_quicklook },
+}

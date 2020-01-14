@@ -1,5 +1,9 @@
-[String] $targets = '<%= @targets %>'
-[Bool] $user = $<%= @user %>
+<%- | String  $targets,
+      Boolean $user
+| -%>
+
+[String] $targets = '<%= $targets %>'
+[Bool] $user = $<%= $user %>
 
 function Get-StartmenuShortcutsUser ([System.Collections.Generic.HashSet[string]] $targets, [bool] $user){
   $StartMenuPath = If ($user) {
@@ -19,6 +23,10 @@ function Get-StartmenuShortcutsUser ([System.Collections.Generic.HashSet[string]
     }
   }
   [Runtime.InteropServices.Marshal]::ReleaseComObject($Shell) | Out-Null
+}
+
+if( [string]::IsNullOrEmpty($targets) ) {
+  throw "'targets' must have at least one path, it is '$targets'"
 }
 
 $targetSet = New-Object System.Collections.Generic.HashSet[string] (,$targets.split(';'))
