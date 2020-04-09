@@ -30,8 +30,8 @@ resources_win_packages: {
   #jcpicker     : { profile : office_advanced }, #installer not working (since 20190605)
 
   miktex       : { profile : office_latex },
-  texstudio    : { profile : office_latex, ensure : present },
-  jabref       : { profile : office_latex, ensure : present },
+  #texstudio    : { profile : office_latex, ensure : present }, # replaced by vscode
+  jabref       : { profile : office_latex, ensure : present }, 
 
 
   ### media ############
@@ -49,7 +49,7 @@ resources_win_packages: {
   audacity-lame   : { profile : [media, dev_basics] },
   audacity        : { profile : [media, dev_basics] },
 
-  calibre         : { profile : media }, # convert any file to ebook'
+  calibre         : { profile : media, ensure : present }, # convert any file to ebook'
 
 
   ### dev/administation ############
@@ -69,13 +69,15 @@ resources_win_packages: {
   runasdate             : { profile : [administration, dev_basics] },
   sandboxie             : { profile : [administration, dev_basics] },
 
-  pdk : { profile : [admin_puppet] },
+  puppet-agent : { profile : [puppet], ensure : '5.4.0' },
+  pdk : { profile : [puppet_admin] },
 
   # network tools
   curl         : { profile : [administration, dev_basics] },
   wget         : { profile : [administration, dev_basics] },
   putty        : { profile : [administration, dev_basics] },
-  winscp       : { profile : [administration, dev_basics] },
+
+  Npcap        : { profile : [administration, dev_basics] },
   wireshark    : { profile : [administration, dev_basics] },
   CloseTheDoor : { profile : administration }, # close tcp/udp ports
 
@@ -117,7 +119,7 @@ resources_win_packages: {
   #visualstudio2017-workload-universal            : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
   visualstudio2017-workload-vctools               : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
   visualstudio2017-workload-visualstudioextension : { profile : [dev_vs2017enterprise, dev_vs2017community], ensure : present },
-  visualstudio2017-workload-managedgame           : { profile : dev_vs2017enterprise, ensure : present }, #TODO require_packages : dev3d_unity
+  visualstudio2017-workload-managedgame           : { profile : dev_vs2017enterprise }, #TODO require_packages : dev3d_unity
 
   # vs2019
   visualstudio2019enterprise                      : { profile : dev_vs2019enterprise, ensure : present }, # to large for upgrade every time
@@ -130,7 +132,7 @@ resources_win_packages: {
   #visualstudio2019-workload-universal            : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
   visualstudio2019-workload-vctools               : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
   visualstudio2019-workload-visualstudioextension : { profile : [dev_vs2019enterprise, dev_vs2019community], ensure : present },
-  visualstudio2019-workload-managedgame           : { profile : dev_vs2019enterprise, ensure : present }, #TODO require_packages : dev3d_unity
+  visualstudio2019-workload-managedgame           : { profile : dev_vs2019enterprise }, #TODO require_packages : dev3d_unity
   
   #dotnet
   resharper-ultimate-all   : { profile : [
@@ -147,8 +149,9 @@ resources_win_packages: {
 
 
   # 3D tools
-  unity                 : { profile : dev3d_unity, ensure : '2019.2.17', postprocessOnRefresh : pkgpost_unity },
-  unity-hub             : { profile : dev3d_unity, ensure : present, postprocessOnRefresh : pkgpost_unity_hub },
+  #install unity from unity hub, otherwise it may cause issues with android sdk like black screen in build screen
+  #unity                 : { profile : dev3d_unity, ensure : '2019.3.0', postprocessOnRefresh : pkgpost_unity },
+  unity-hub             : { profile : dev3d_unity, postprocessOnRefresh : pkgpost_unity_hub },
   #'unity-standard-assets' : { profile : dev3d_unity, ensure : present },
 
   blender                               : { profile : dev3d_blender, postprocessOnRefresh : pkgpost_blender },

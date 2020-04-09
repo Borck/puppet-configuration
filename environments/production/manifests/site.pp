@@ -80,7 +80,8 @@ class setup_win {
     office_365proplus    => false,
     media                => $is_my_pc,
     administration       => $is_my_user or $is_my_pc,
-    admin_puppet         => $is_my_pc,
+    puppet               => true,
+    puppet_admin         => $is_my_pc,
     browser_firefox      => $is_my_user,
     browser_chrome       => false,
     browser_opera        => false,
@@ -135,7 +136,7 @@ class setup_win {
   #class {'packages':             profile => $profile }
 
 
-  class { 'win_reg_adjustments': profile => $profile }
+  class { 'win_configure': profile => $profile }
 
   if $is_my_pc {
     class {'nas_mount':}
@@ -167,7 +168,8 @@ type SetupProfile = Struct[{
   Optional[office_365proplus]    => Boolean,
   Optional[media]                => Boolean,
   Optional[administration]       => Boolean,
-  Optional[admin_puppet]         => Boolean,
+  Optional[puppet]               => Boolean,
+  Optional[puppet_admin]         => Boolean,
   Optional[browser_firefox]      => Boolean,
   Optional[browser_chrome]       => Boolean,
   Optional[browser_opera]        => Boolean,
@@ -549,7 +551,7 @@ class icons {
 }
 
 
-class win_reg_adjustments ( SetupProfile $profile ) {
+class win_configure ( SetupProfile $profile ) {
   $icons = getparam(File['Icons.puppet'], 'path')
 
   $username = $::identity['user']
@@ -562,6 +564,15 @@ class win_reg_adjustments ( SetupProfile $profile ) {
   $is_media    = $profile['media'] == true
   $is_workflow = $profile['workflow'] == true
 
+  # Setting Powershell Execution Policy to unrestricted
+  # TODO: sign used powershell script and remove this (or set back to restricted)
+
+  # https://docs.microsoft.com/de-de/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7
+  exec { 'Set PowerShell execution policy unrestricted':
+    command  => 'Set-ExecutionPolicy Restricted',
+    unless   => 'if ((Get-ExecutionPolicy -Scope LocalMachine).ToString() -eq "Restricted") { exit 0 } else { exit 1 }',
+    provider => powershell
+  }
 
   if $is_dev or $is_admin {
     include reg_admin_context_menu
@@ -768,6 +779,9 @@ class reg_admin_context_menu {
       no_working_directory => '',
       icon                 => 'shell32.dll,-29',
     }
+    $menu_position = 'Bottom'
+
+
     #Windows.Takeownership.Drive: applies_to => 'NOT (System.ItemPathDisplay:=\"C:\\\")'
     $reg_own_dir_ignore = [
       "${::windows_env['SYSTEMDRIVE']}\\Users",
@@ -784,21 +798,18 @@ class reg_admin_context_menu {
     registryx::class { 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore':
       shell => {
         'Windows.Takeownership.Directory' => $reg_own_a + {
-          no_working_directory => '',
-          command              => $cmd_own_dir,
-          isolated_command     => $cmd_own_dir,
-          applies_to           => "NOT (${join($reg_own_dir_ignore, ' OR ')})"
+          command          => $cmd_own_dir,
+          isolated_command => $cmd_own_dir,
+          applies_to       => "NOT (${join($reg_own_dir_ignore, ' OR ')})"
         },
         'Windows.Takeownership.Drive'     => $reg_own_a + {
-          no_working_directory => '',
-          command              => $cmd_own_drive,
-          isolated_command     => $cmd_own_drive,
-          applies_to           => "NOT (${join($reg_own_drive_ignore, ' OR ')})"
+          command          => $cmd_own_drive,
+          isolated_command => $cmd_own_drive,
+          applies_to       => "NOT (${join($reg_own_drive_ignore, ' OR ')})"
         },
         'Windows.Takeownership.File'      => $reg_own_a + {
-          no_working_directory => '',
-          command              => $cmd_own_f,
-          isolated_command     => $cmd_own_f,
+          command          => $cmd_own_f,
+          isolated_command => $cmd_own_f,
         }
       }
     }
@@ -817,7 +828,7 @@ class reg_admin_context_menu {
       shell => {'Administration' => {
         sub_commands => join($reg_admin_menu_dir_and_drive+['Windows.Takeownership.Directory',],';'),
         icon         => 'imageres.dll,-5323',
-        position     => 'middle',
+        position     => $menu_position,
       }}
     }
     registryx::class {
@@ -825,14 +836,14 @@ class reg_admin_context_menu {
       shell => {'Administration' => {
         sub_commands => join($reg_admin_menu_dir_and_drive+['Windows.Takeownership.Drive',],';'),
         icon         => 'imageres.dll,-5323',
-        position     => 'middle',
+        position     => $menu_position,
       }}
     }
     registryx::class { 'HKCR\\*':
       shell => {'Administration' => {
         sub_commands => join(['Windows.Takeownership.File',],';'),
         icon         => 'imageres.dll,-5323',
-        position     => 'middle',
+        position     => $menu_position,
       }}
     }
     registry_key {[
@@ -909,7 +920,7 @@ class package_upgrade_task (
   scheduled_task { 'Chocolatey Upgrade All':
     enabled   => true,
     command   => "${::system32}\\WindowsPowerShell\\v1.0\\powershell.exe",
-    arguments => "-File \"${cup_script}\"",
+    arguments => "-NoProfile -NoLogo -NonInteractive -ExecutionPolicy Bypass -File \"${cup_script}\"",
     user      => 'system',
     trigger   => [{
       schedule    => 'weekly',
