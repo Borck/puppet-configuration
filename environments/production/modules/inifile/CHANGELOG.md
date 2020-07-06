@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [v4.2.0](https://github.com/puppetlabs/puppetlabs-inifile/tree/v4.2.0) (2020-04-27)
+
+[Full Changelog](https://github.com/puppetlabs/puppetlabs-inifile/compare/v4.1.0...v4.2.0)
+
+### Added
+
+- Finish API conversion of `create\_ini\_settings` [\#387](https://github.com/puppetlabs/puppetlabs-inifile/pull/387) ([alexjfisher](https://github.com/alexjfisher))
+
+## [v4.1.0](https://github.com/puppetlabs/puppetlabs-inifile/tree/v4.1.0) (2020-01-15)
+
+[Full Changelog](https://github.com/puppetlabs/puppetlabs-inifile/compare/v4.0.0...v4.1.0)
+
+### Added
+
+- pdksync - \(FM-8581\) - Debian 10 added to travis and provision file refactored [\#374](https://github.com/puppetlabs/puppetlabs-inifile/pull/374) ([david22swan](https://github.com/david22swan))
+- Puppet 4 functions [\#373](https://github.com/puppetlabs/puppetlabs-inifile/pull/373) ([binford2k](https://github.com/binford2k))
+- pdksync - "MODULES-10242 Add ubuntu14 support back to the modules" [\#368](https://github.com/puppetlabs/puppetlabs-inifile/pull/368) ([sheenaajay](https://github.com/sheenaajay))
+- \(FM-8689\) - Addition of Support for CentOS 8 [\#366](https://github.com/puppetlabs/puppetlabs-inifile/pull/366) ([david22swan](https://github.com/david22swan))
+
+## [v4.0.0](https://github.com/puppetlabs/puppetlabs-inifile/tree/v4.0.0) (2019-11-11)
+
+[Full Changelog](https://github.com/puppetlabs/puppetlabs-inifile/compare/v3.1.0...v4.0.0)
+
+### Changed
+
+- pdksync - FM-8499 - remove ubuntu14 support [\#363](https://github.com/puppetlabs/puppetlabs-inifile/pull/363) ([lionce](https://github.com/lionce))
+
+### Added
+
+- FM-8402 add debian 10 support [\#352](https://github.com/puppetlabs/puppetlabs-inifile/pull/352) ([lionce](https://github.com/lionce))
+
 ## [v3.1.0](https://github.com/puppetlabs/puppetlabs-inifile/tree/v3.1.0) (2019-07-31)
 
 [Full Changelog](https://github.com/puppetlabs/puppetlabs-inifile/compare/v3.0.0...v3.1.0)
