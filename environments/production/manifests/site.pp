@@ -110,13 +110,21 @@ class setup_win {
   notice("Apply profile:\n${profile}")
   notice('')
 
-  #$packages=get_win_packages($profile)
+  #$packages_to_install=get_win_packages($profile)
 # function get_win_packages(SetupProfile $profile) >> Hash[String, PackageSetup] {
-  $package_defaults = $facts['resources_win_package_defaults']
-  $packages_def = $facts['resources_win_packages']
+  $package_defaults = $facts[resources_win_package_defaults]
+  $packages = $facts[resources_win_packages]
+              .map|$name, $setup|{ [$name, $package_defaults+$setup] }
+              .convert_to(Hash)
+  notice("Package defaults:\n${package_defaults}")
+  notice("Packages:\n${packages}")
+  notice('')
+  #TODO merge with defaults
 
-  $packages = $packages_def.filter|$name, $setup|{
+  $packages_to_install = $packages
+  .filter|$name, $setup|{
     $setup_profile = $setup['profile']
+    $setup['ensure'] != 'ignore_from_upgrade' and
     $setup_profile ? {
       String        => $profile[$setup_profile],
       Array[String] => $setup_profile.reduce(false) |Boolean $memo, String $pkg_profile| {
@@ -127,12 +135,11 @@ class setup_win {
 # }
 
 
-
-  $packages_names = join(($packages.map |$name,$setup| {$name}).sort,', ')
+  $packages_names = join(($packages_to_install.map |$name,$setup| {$name}).sort,', ')
   notice("Apply packages:\n${packages_names}")
 
-  class {'setup_packages': packages => $packages, profile => $profile}
-  class {'setup_package_auto_upgrade_task': packages => $packages}
+  class {'setup_packages': packages => $packages_to_install, profile => $profile}
+  class {'setup_package_auto_upgrade_task': packages => $packages} # use all packages to prevent upgrade of side installations like unity
   #class {'packages':             profile => $profile }
 
 
@@ -152,6 +159,7 @@ class setup_win {
 
 type PackageSetup = Struct[{
   profile => Variant[String,Array[String]],
+  Optional[provider]             => String,
   Optional[install_options]      => Array[String],
   Optional[ensure]               => String,
   Optional[preprocess]           => String,

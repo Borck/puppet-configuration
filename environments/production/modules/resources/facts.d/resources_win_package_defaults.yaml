@@ -1,4 +1,4 @@
 resources_win_package_defaults : {
   provider : chocolatey,
-  ensure   : upgrade,
+  ensure   : latest,
 }

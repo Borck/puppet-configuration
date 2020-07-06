@@ -150,7 +150,7 @@ resources_win_packages: {
 
   # 3D tools
   #install unity from unity hub, otherwise it may cause issues with android sdk like black screen in build screen
-  #unity                 : { profile : dev3d_unity, ensure : '2019.3.0', postprocessOnRefresh : pkgpost_unity },
+  unity                 : { profile : dev3d_unity, ensure : ignore_from_upgrade }, # , postprocessOnRefresh : pkgpost_unity
   unity-hub             : { profile : dev3d_unity, postprocessOnRefresh : pkgpost_unity_hub },
   #'unity-standard-assets' : { profile : dev3d_unity, ensure : present },
 
@@ -165,5 +165,5 @@ resources_win_packages: {
 
   ### workflow ############
 
-  quicklook : { profile : [workflow], postprocess : pkgpost_quicklook },
+  quicklook : { profile : workflow, postprocess : pkgpost_quicklook },
 }
