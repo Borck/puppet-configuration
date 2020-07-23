@@ -94,8 +94,8 @@ resources_win_packages: {
   # version control
   git         : { profile : [dev_basics], postprocess : pkgpost_git },
   tortoisegit : { profile : [dev_basics], ensure : present }, # upgrade may cause errors
-  tortoisesvn : { profile : [dev_basics] },
-  sourcetree  : { profile : [dev_basics] },
+  #tortoisesvn : { profile : [dev_basics] },
+  #sourcetree  : { profile : [dev_basics] },
 
   hxd    : { profile : [dev_basics] },
   ghidra : { profile : [dev_basics], ensure : present }, #A software reverse engineering (SRE) suite of tools developed by NSA's Research Directorate 
