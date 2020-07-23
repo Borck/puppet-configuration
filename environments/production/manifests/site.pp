@@ -67,7 +67,8 @@ class setup_win {
   $is_my_pc   = 'borck' in downcase($::hostname)
   $is_my_stationary_pc   = $is_my_pc and 'PC' in downcase($::hostname)
   $is_at_pc   = $::hostname =~ /^AT\d+$/
-  $is_my_user = '\\borck' in downcase($username)
+  $is_my_user = downcase($username) =~ /\\.*borck/
+  #'\\borck' in downcase($username)
   $is_render_pc = $is_my_stationary_pc or $is_at_pc
 
   # $test = hiera('packages')
@@ -576,7 +577,7 @@ class win_configure ( SetupProfile $profile ) {
   # TODO: sign used powershell script and remove this (or set back to restricted)
 
   # https://docs.microsoft.com/de-de/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7
-  exec { 'Set PowerShell execution policy unrestricted':
+  exec { 'Set PowerShell execution policy restricted':
     command  => 'Set-ExecutionPolicy Restricted',
     unless   => 'if ((Get-ExecutionPolicy -Scope LocalMachine).ToString() -eq "Restricted") { exit 0 } else { exit 1 }',
     provider => powershell
