@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [v3.2.0](https://github.com/puppetlabs/puppetlabs-registry/tree/v3.2.0) (2020-12-08)
+
+[Full Changelog](https://github.com/puppetlabs/puppetlabs-registry/compare/v3.1.1...v3.2.0)
+
+### Added
+
+- pdksync - \(feat\) Add support for Puppet 7 [\#231](https://github.com/puppetlabs/puppetlabs-registry/pull/231) ([daianamezdrea](https://github.com/daianamezdrea))
+- pdksync - \(IAC-973\) - Update travis/appveyor to run on new default branch `main` [\#217](https://github.com/puppetlabs/puppetlabs-registry/pull/217) ([david22swan](https://github.com/david22swan))
+
+## [v3.1.1](https://github.com/puppetlabs/puppetlabs-registry/tree/v3.1.1) (2020-08-12)
+
+[Full Changelog](https://github.com/puppetlabs/puppetlabs-registry/compare/v3.1.0...v3.1.1)
+
+### Fixed
+
+- \(IAC-967\) Puppet 7 compatibility fix: null termination for strings [\#216](https://github.com/puppetlabs/puppetlabs-registry/pull/216) ([sanfrancrisko](https://github.com/sanfrancrisko))
+
 ## [v3.1.0](https://github.com/puppetlabs/puppetlabs-registry/tree/v3.1.0) (2019-12-10)
 
 [Full Changelog](https://github.com/puppetlabs/puppetlabs-registry/compare/v3.0.0...v3.1.0)
@@ -38,7 +55,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 - Fix types to no longer use unsupported proc title patterns ([MODULES-6818](https://tickets.puppetlabs.com/browse/MODULES-6818))
-- Fix acceptance tests in master-agent scenarios ([FM-6934](https://tickets.puppetlabs.com/browse/FM-6934))
+- Fix acceptance tests in server-agent scenarios ([FM-6934](https://tickets.puppetlabs.com/browse/FM-6934))
 - Use case insensitive search when purging ([MODULES-7534](https://tickets.puppetlabs.com/browse/MODULES-7534))
 
 ### Removed

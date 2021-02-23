@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'puppet/type'
 require 'pathname'
 
@@ -215,8 +217,8 @@ Puppet::Type.newtype(:chocolateysource) do
     false
   end
 
-  def set_sensitive_parameters(sensitive_parameters) # rubocop:disable Style/AccessorMethodName
-    parameter(:password).sensitive = true if parameter(:password)
+  def set_sensitive_parameters(sensitive_parameters)
+    parameter(:password)&.sensitive = true
     super(sensitive_parameters)
   end
 end

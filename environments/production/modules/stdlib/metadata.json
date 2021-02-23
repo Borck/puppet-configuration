@@ -1,6 +1,6 @@
 {
   "name": "puppetlabs-stdlib",
-  "version": "6.3.0",
+  "version": "6.6.0",
   "author": "puppetlabs",
   "summary": "Standard library of resources for Puppet modules.",
   "license": "Apache-2.0",
@@ -8,9 +8,8 @@
   "project_page": "https://github.com/puppetlabs/puppetlabs-stdlib",
   "issues_url": "https://tickets.puppetlabs.com/browse/MODULES",
   "dependencies": [
-  
+
   ],
-  "data_provider": null,
   "operatingsystem_support": [
     {
       "operatingsystem": "RedHat",
@@ -66,7 +65,8 @@
       "operatingsystemrelease": [
         "14.04",
         "16.04",
-        "18.04"
+        "18.04",
+        "20.04"
       ]
     },
     {
@@ -102,11 +102,11 @@
   "requirements": [
     {
       "name": "puppet",
-      "version_requirement": ">= 5.5.10 < 7.0.0"
+      "version_requirement": ">= 5.5.10 < 8.0.0"
     }
   ],
   "description": "Standard Library for Puppet Modules",
-  "pdk-version": "1.17.0",
-  "template-url": "https://github.com/puppetlabs/pdk-templates#master",
-  "template-ref": "1.17.0-0-gd3a4319"
+  "pdk-version": "1.18.1",
+  "template-url": "https://github.com/puppetlabs/pdk-templates#main",
+  "template-ref": "heads/main-0-g5afcd3d"
 }
