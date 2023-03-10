@@ -6,6 +6,7 @@ function puppetUpgradeModule($moduleName){
 
 
 puppetUpgradeModule puppetlabs-chocolatey
+puppetUpgradeModule puppetlabs-puppetlabs-pwshlib
 puppetUpgradeModule puppetlabs-powershell
 puppetUpgradeModule puppetlabs-registry
 puppetUpgradeModule puppetlabs-stdlib

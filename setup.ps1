@@ -22,6 +22,12 @@ Write-Host "This script may install a lots of software, which can take a while .
 Write-Host "Mode: $install"
 Write-Host ""
 
+function Refresh-Envvars
+{
+  $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+}
+
+
 if($install -eq 'Upgrade'){
   EnsureChoco
   
@@ -31,11 +37,15 @@ if($install -eq 'Upgrade'){
   
   Write-Host "Upgrade required software"
   UpgradeChocoPackage puppet-agent
+
+  Refresh-Envvars
 } elseif ($install -eq 'Install') {
   EnsureChoco
   
   Write-Host "Install required software"
   EnsureChocoPackage puppet-agent
+
+  Refresh-Envvars
 }
 
 

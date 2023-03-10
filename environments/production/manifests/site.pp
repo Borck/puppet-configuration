@@ -90,14 +90,16 @@ class setup_win {
     dev_dotnet           => $is_my_user,
     dev_vs2017enterprise => false,
     dev_vs2017community  => false,
-    dev_vs2019enterprise => $is_my_user,
+    dev_vs2019enterprise => false,
+    # $is_my_user,
     dev_vs2019community  => false,
     dev_java             => false,
     dev_python           => $is_my_user,
-    dev_microcontroller  => $is_my_pc,
+    # dev_microcontroller  => $is_my_pc,
     dev3d_unity          => $is_render_pc,
-    dev3d_blender        => $is_render_pc,
+    dev3d_blender        => false,
     dev3d_humanoid       => $is_render_pc,
+    dev3d_sketchup       => false,
     driver_tools         => $is_my_pc,
     driver_logitech_io   => $is_my_pc,
     workflow             => $is_my_user,
@@ -107,6 +109,11 @@ class setup_win {
 
   include chocolatey
   Package { provider => chocolatey, ensure => present }
+
+  exec { 'Chocolatey.useRememberedArgumentsForUpgrades':
+    command  => 'choco feature enable -n useRememberedArgumentsForUpgrades',
+    provider => powershell,
+  }
 
   notice("Apply profile:\n${profile}")
   notice('')
@@ -163,9 +170,8 @@ type PackageSetup = Struct[{
   Optional[provider]             => String,
   Optional[install_options]      => Array[String],
   Optional[ensure]               => String,
-  Optional[preprocess]           => String,
-  Optional[postprocess]          => String,
-  Optional[postprocessOnRefresh] => String,
+  Optional[beforeInstall]        => String,
+  Optional[afterInstall]         => String,
 }]
 
 
@@ -190,10 +196,11 @@ type SetupProfile = Struct[{
   Optional[dev_vs2019community]  => Boolean,
   Optional[dev_java]             => Boolean,
   Optional[dev_python]           => Boolean,
-  Optional[dev_microcontroller]  => Boolean,
+  # Optional[dev_microcontroller]  => Boolean,
   Optional[dev3d_unity]          => Boolean,
   Optional[dev3d_blender]        => Boolean,
   Optional[dev3d_humanoid]       => Boolean,
+  Optional[dev3d_sketchup]       => Boolean,
   Optional[driver_tools]         => Boolean,
   Optional[driver_logitech_io]   => Boolean,
   Optional[workflow]             => Boolean,
@@ -209,6 +216,21 @@ class setup_packages( Hash[String, PackageSetup] $packages, SetupProfile $profil
 
 
 
+define setup_package(PackageSetup $setup, SetupProfile $profile){
+  package{$name:
+    ensure          => $setup['ensure']? { latest  => 'present', default => $setup['ensure'] },
+    install_options => $setup['install_options'],
+  }
+
+  if $setup['beforeInstall'] {
+    class { $setup['beforeInstall']: profile => $profile, before => Package[$name]}
+  }
+  if $setup['afterInstall'] {
+    class { $setup['afterInstall']: profile => $profile, subscribe => Package[$name]}
+  }
+}
+
+
 class setup_package_auto_upgrade_task(Hash[String, PackageSetup] $packages) {
   class {'package_upgrade_task':
       ignored_packages => $packages
@@ -217,24 +239,6 @@ class setup_package_auto_upgrade_task(Hash[String, PackageSetup] $packages) {
     }
 }
 
-
-
-define setup_package(PackageSetup $setup, SetupProfile $profile){
-  package{$name:
-    ensure          => $setup['ensure']? { latest  => 'present', default => $setup['ensure'] },
-    install_options => $setup['install_options'],
-  }
-
-  if $setup['preprocess'] {
-    class { $setup['preprocess']: profile => $profile, before => Package[$name]}
-  }
-  if $setup['postprocess'] {
-    class { $setup['postprocess']: profile => $profile, require => Package[$name]}
-  }
-  if $setup['postprocessOnRefresh'] {
-    class { $setup['postprocessOnRefresh']: profile => $profile, subscribe => Package[$name]}
-  }
-}
 
 
 
@@ -681,9 +685,13 @@ class win_configure ( SetupProfile $profile ) {
       type => dword, data => 0x00000001 }
 
     # keyboard: remap capslock to shift
-    registry_value { "${hkcu}\\Keyboard Layout\\Scancode Map":
+    registry_value { 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Keyboard Layout\\Scancode Map':
+    # 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Keyboard Layout\\Scancode Map'
+    # "${hkcu}\\Keyboard Layout\\Scancode Map"
       # 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Keyboard Layout\\Scancode Map'
-      type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00' }
+      type => binary, data => '00 00 00 00 00 00 00 00 02 00 00 00 2a 00 3a 00 00 00 00 00'
+    }
+
 
     # Hide_Message_-_“Es_konnten_nicht_alle_Netzlaufwerke_wiederhergestellt_werden”
     registry_value { 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\NetworkProvider\\RestoreConnection':

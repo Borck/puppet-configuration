@@ -1,15 +1,17 @@
 resources_win_packages: {
   choco-cleaner :                            { profile : [administration, office, office_advanced, dev_basics, media, workflow] },
+  chocolateygui : { profile : [administration] }, # , office, office_advanced, dev_basics, media, workflow
   chocolatey-toast-notifications.extension : { profile : [administration] }, # , office, office_advanced, dev_basics, media, workflow
   chocolatey-preinstaller-checks.extension : { profile : [administration, office, office_advanced, dev_basics, media, workflow] },
 
   ### office/browser ################
-  firefox       : { profile : browser_firefox, install_options : ['--params', '"/DesktopShortcut=false"'], ensure : present }, #silent update
+  # firefox       : { profile : browser_firefox, install_options : ['--params', '"/DesktopShortcut=false"'], ensure : present }, #silent update # install over ms store
   googlechrome  : { profile : browser_chrome, ensure : present }, #silent update
   opera         : { profile : browser_opera, ensure : present }, #silent update
 
-  #EdgeDeflector: redirects URI to the default browser (caution: menu popup on install)
-  EdgeDeflector : { profile : [browser_firefox, browser_chrome, browser_opera] },
+  #redirects URI to the default browser
+  # EdgeDeflector : { profile : [browser_firefox, browser_chrome, browser_opera] }, # (caution: menu popup on install
+  MSEdgeRedirect : { profile : [browser_firefox, browser_chrome, browser_opera] },
 
   # index PDF documents using Microsoft indexing clients, allows the user to easily search for text in PDF
   # TODO if $::architecture == x64 {}
@@ -18,13 +20,14 @@ resources_win_packages: {
 
   office365proplus : { profile : office_365proplus, ensure : present },
 
-  7zip           : { profile : office, postprocess : pkgpost_sevenzip },
+  nanazip           : { profile : office, afterInstall : pkgpost_sevenzip },
+  # 7zip           : { profile : office, afterInstall : pkgpost_sevenzip },
+  # TODO: use some alternative with Windows 11 Context menu like NanaZip
 
   ### office advanced #########
   trid         : { profile : [administration, office_advanced, dev] }, # identify file types from their binary signatures
-  inkscape     : { profile : office_advanced, postprocess : pkgpost_inkscape },
+  inkscape     : { profile : office_advanced, afterInstall : pkgpost_inkscape },
   yed          : { profile : [office_advanced, dev_basics] },
-  sketchup     : { profile : [office_advanced, dev_basics] }, # sketchup 2017, last free version
   capture2text : { profile : office_advanced },
   screentogif  : { profile : office_advanced }, #screenshot animation
   #jcpicker     : { profile : office_advanced }, #installer not working (since 20190605)
@@ -36,15 +39,15 @@ resources_win_packages: {
 
   ### media ############
 
-  vlc             : { profile : [office, media, dev_basics], postprocess : pkgpost_vlc },
+  vlc             : { profile : [office, media, dev_basics], afterInstall : pkgpost_vlc },
   handbrake       : { profile : media }, # video converter
   mkvtoolnix      : { profile : media }, # mkv tools
-  caesium.install : { profile : media, postprocess : pkgpost_caesium }, # image converter
+  caesium.install : { profile : media, afterInstall : pkgpost_caesium }, # image converter
   picard          : { profile : media }, # MusicBrainz Picard, music tags online grabber, requires vcredist2008
   mp3tag          : {
     profile         : media,
     install_options : ["--package-parameters='\"/NoDesktopShortcut", "/NoContextMenu\"'"],
-    postprocess     : pkgpost_mp3tag
+    afterInstall     : pkgpost_mp3tag
   },
   audacity-lame   : { profile : [media, dev_basics] },
   audacity        : { profile : [media, dev_basics] },
@@ -58,10 +61,10 @@ resources_win_packages: {
     profile         : [administration, dev_basics],
     ensure          : present, #has a integrated semi silent upgrader
     install_options : ['--params', '"/NoDesktopIcon', '/NoQuicklaunchIcon"'],
-    postprocess     : pkgpost_vscode
+    afterInstall     : pkgpost_vscode
   },
 
-  bulkrenameutility     : { profile : [office_advanced, administation, dev_basics], postprocess : pkgpost_bulkrenameutility },
+  bulkrenameutility     : { profile : [office_advanced, administation, dev_basics], afterInstall : pkgpost_bulkrenameutility },
   lockhunter            : { profile : [office_advanced, administation, dev_basics] },
   dupeguru              : { profile : [administation, dev_basics] },
   windirstat            : { profile : [administation] },
@@ -77,23 +80,24 @@ resources_win_packages: {
   wget         : { profile : [administration, dev_basics] },
   putty        : { profile : [administration, dev_basics] },
 
-  Npcap        : { profile : [administration, dev_basics] },
+  # Npcap        : { profile : [administration, dev_basics] }, #package was unlisted on chocolatey (checked 20200729)
   wireshark    : { profile : [administration, dev_basics] },
   CloseTheDoor : { profile : administration }, # close tcp/udp ports
 
   # image tools
   etcher          : { profile : [administration, dev_basics] },
-  rufus           : { profile : [administration, dev_basics] },
+  #rufus           : { profile : [administration, dev_basics] }, not needed/optional
   win32diskimager : { profile : [administration, dev_basics] },
 
   # system tools
-  bluescreenview : { profile : administration },
-  regfromapp     : { profile : administration },
-  Sysinternals   : { profile : administration },
+  bluescreenview    : { profile : administration },
+  regfromapp        : { profile : administration },
+  Sysinternals      : { profile : administration },
+  #battoexeconverter : { profile : administration },
 
   # version control
-  git         : { profile : [dev_basics], postprocess : pkgpost_git },
-  tortoisegit : { profile : [dev_basics], ensure : present }, # upgrade may cause errors
+  git         : { profile : [dev_basics], afterInstall : pkgpost_git },
+  tortoisegit : { profile : [dev_basics], },
   #tortoisesvn : { profile : [dev_basics] },
   #sourcetree  : { profile : [dev_basics] },
 
@@ -106,7 +110,7 @@ resources_win_packages: {
   #['--params=\'"/AddToPath', "/D:${::windows_env['PROGRAMFILES']}\"\'"], },
   # --params '"/AddToPath /D:c:\MyTools"'
   # --params="'/serverinstance:MyServer /buildtype:OTP'"
-  arduino : { profile : dev_microcontroller, postprocessOnRefresh : pkgpost_arduino }, # spy/browse the visual tree of a running WPF application ... and change properties
+  # arduino : { profile : dev_microcontroller, afterInstall : pkgpost_arduino }, # spy/browse the visual tree of a running WPF application ... and change properties
 
   # vs2017
   visualstudio2017enterprise                      : { profile : dev_vs2017enterprise, ensure : present }, # to large for upgrade every time
@@ -144,26 +148,27 @@ resources_win_packages: {
 
   #java
   #choco pin add -n=jdk8
-  jdk8    : { profile : dev_java, ensure : present }, # upgrade may dumping your system, 20190628
-  eclipse : { profile : dev_java },
-
+  #jdk8    : { profile : dev_java, ensure : present }, # upgrade may dumping your system, 20190628
+  #eclipse : { profile : dev_java },
 
   # 3D tools
   #install unity from unity hub, otherwise it may cause issues with android sdk like black screen in build screen
-  unity                 : { profile : dev3d_unity, ensure : ignore_from_upgrade }, # , postprocessOnRefresh : pkgpost_unity
-  unity-hub             : { profile : dev3d_unity, postprocessOnRefresh : pkgpost_unity_hub },
+  unity                 : { profile : dev3d_unity, ensure : ignore_from_upgrade }, # , afterInstall : pkgpost_unity
+  unity-hub             : { profile : dev3d_unity, afterInstall : pkgpost_unity_hub },
   #'unity-standard-assets' : { profile : dev3d_unity, ensure : present },
 
-  blender                               : { profile : dev3d_blender, postprocessOnRefresh : pkgpost_blender },
+  blender                               : { profile : dev3d_blender, afterInstall : pkgpost_blender },
   makehuman                             : { profile : dev3d_humanoid },
+  
+  sketchup     : { profile : [dev3d_sketchup] }, # sketchup 2017, last free version
 
   ### driver tools ############
 
   sdio             : { profile : driver_tools }, # Snappy Driver Installer Origin (open source)
-  logitech-options : { profile : driver_logitech_io, postprocess : pkgpost_logitech_options }, # Logitech Options software lets you customize your device settings
+  logitech-options : { profile : driver_logitech_io, afterInstall : pkgpost_logitech_options }, # Logitech Options software lets you customize your device settings
 
 
   ### workflow ############
 
-  quicklook : { profile : workflow, postprocess : pkgpost_quicklook },
+  quicklook : { profile : workflow, afterInstall : pkgpost_quicklook },
 }
