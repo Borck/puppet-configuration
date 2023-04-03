@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 #
 # validate_interger.rb
 #
 module Puppet::Parser::Functions
-  newfunction(:validate_integer, :doc => <<-DOC
+  newfunction(:validate_integer, doc: <<-DOC
     @summary
       Validate that the first argument is an integer (or an array of integers). Abort catalog compilation if any of the checks fail.
 
@@ -58,7 +60,7 @@ module Puppet::Parser::Functions
       Plus all of the above, but with non-integer items in arrays or maximum / minimum argument.
 
     DOC
-             ) do |args|
+  ) do |args|
     function_deprecation([:validate_integer, 'This method is deprecated, please use the stdlib validate_legacy function,
                             with Stdlib::Compat::Integer. There is further documentation for validate_legacy function in the README.'])
 
@@ -117,13 +119,11 @@ module Puppet::Parser::Functions
     when Array
       # check every element of the array
       input.each_with_index do |arg, pos|
-        begin
-          raise TypeError if arg.is_a?(Hash)
-          arg = Integer(arg.to_s)
-          validator.call(arg)
-        rescue TypeError, ArgumentError
-          raise Puppet::ParseError, "validate_integer(): Expected element at array position #{pos} to be an Integer, got #{arg.class}"
-        end
+        raise TypeError if arg.is_a?(Hash)
+        arg = Integer(arg.to_s)
+        validator.call(arg)
+      rescue TypeError, ArgumentError
+        raise Puppet::ParseError, "validate_integer(): Expected element at array position #{pos} to be an Integer, got #{arg.class}"
       end
     # for the sake of compatibility with ruby 1.8, we need extra handling of hashes
     when Hash

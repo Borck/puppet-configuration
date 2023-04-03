@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 #
 # loadjson.rb
 #
 
 module Puppet::Parser::Functions
-  newfunction(:loadjson, :type => :rvalue, :arity => -2, :doc => <<-'DOC') do |args|
+  newfunction(:loadjson, type: :rvalue, arity: -2, doc: <<-'DOC') do |args|
     @summary
       Load a JSON file containing an array, string, or hash, and return the data
       in the corresponding native data type.
@@ -26,21 +28,22 @@ module Puppet::Parser::Functions
     require 'open-uri'
     begin
       if args[0].start_with?('http://', 'https://')
-        username = ''
-        password = ''
+        http_options = {}
         if (match = args[0].match(%r{(http\://|https\://)(.*):(.*)@(.*)}))
           # If URL is in the format of https://username:password@example.local/my_hash.yaml
           protocol, username, password, path = match.captures
           url = "#{protocol}#{path}"
+          http_options[:http_basic_authentication] = [username, password]
         elsif (match = args[0].match(%r{(http\:\/\/|https\:\/\/)(.*)@(.*)}))
           # If URL is in the format of https://username@example.local/my_hash.yaml
           protocol, username, path = match.captures
           url = "#{protocol}#{path}"
+          http_options[:http_basic_authentication] = [username, '']
         else
           url = args[0]
         end
         begin
-          contents = OpenURI.open_uri(url, :http_basic_authentication => [username, password])
+          contents = OpenURI.open_uri(url, **http_options)
         rescue OpenURI::HTTPError => err
           res = err.io
           warning("Can't load '#{url}' HTTP Error Code: '#{res.status[0]}'")

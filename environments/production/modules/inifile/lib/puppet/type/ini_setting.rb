@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'digest/md5'
 require 'puppet/parameter/boolean'
 
@@ -87,6 +89,7 @@ Puppet::Type.newtype(:ini_setting) do
     desc 'The value of the setting to be defined.'
 
     munge do |value|
+      value = value.unwrap if value.respond_to?(:unwrap)
       if ([true, false].include? value) || value.is_a?(Numeric)
         value.to_s
       else
@@ -104,7 +107,7 @@ Puppet::Type.newtype(:ini_setting) do
       end
     end
 
-    def is_to_s(value) # rubocop:disable Style/PredicateName : Changing breaks the code (./.bundle/gems/gems/puppet-5.3.3-universal-darwin/lib/puppet/parameter.rb:525:in `to_s')
+    def is_to_s(value) # rubocop:disable Naming/PredicateName : Changing breaks the code (./.bundle/gems/gems/puppet-5.3.3-universal-darwin/lib/puppet/parameter.rb:525:in `to_s')
       should_to_s(value)
     end
 

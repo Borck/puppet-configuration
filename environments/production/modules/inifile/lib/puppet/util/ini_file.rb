@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require File.expand_path('../external_iterator', __FILE__)
 require File.expand_path('../ini_file/section', __FILE__)
 
@@ -29,19 +31,9 @@ module Puppet::Util
 
     def section_regex
       # Only put in prefix/suffix if they exist
-      # Also, if the prefix is '', the negated
-      # set match should be a match all instead.
       r_string = '^\s*'
       r_string += Regexp.escape(@section_prefix)
-      r_string += '('
-      if @section_prefix != ''
-        r_string += '[^'
-        r_string += Regexp.escape(@section_prefix)
-        r_string += ']'
-      else
-        r_string += '.'
-      end
-      r_string += '*)'
+      r_string += '(.*)'
       r_string += Regexp.escape(@section_suffix)
       r_string += '\s*$'
       %r{#{r_string}}
@@ -64,7 +56,7 @@ module Puppet::Util
       @sections_hash[section_name].get_value(setting) if @sections_hash.key?(section_name)
     end
 
-    def set_value(*args) # rubocop:disable Style/AccessorMethodName : Recomended alternative is a common value name
+    def set_value(*args)
       case args.size
       when 1
         section_name = args[0]

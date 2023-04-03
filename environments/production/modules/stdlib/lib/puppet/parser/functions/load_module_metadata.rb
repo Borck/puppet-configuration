@@ -1,19 +1,21 @@
+# frozen_string_literal: true
+
 #
 # load_module_metadata.rb
 #
 module Puppet::Parser::Functions
-  newfunction(:load_module_metadata, :type => :rvalue, :doc => <<-DOC
+  newfunction(:load_module_metadata, type: :rvalue, doc: <<-DOC
     @summary
       This function loads the metadata of a given module.
 
-    @example Example USage:
+    @example Example Usage:
       $metadata = load_module_metadata('archive')
       notify { $metadata['author']: }
 
     @return
       The modules metadata
   DOC
-             ) do |args|
+  ) do |args|
     raise(Puppet::ParseError, 'load_module_metadata(): Wrong number of arguments, expects one or two') unless [1, 2].include?(args.size)
     mod = args[0]
     allow_empty_metadata = args[1]

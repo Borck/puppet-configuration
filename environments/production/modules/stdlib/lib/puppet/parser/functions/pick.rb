@@ -1,11 +1,15 @@
+# frozen_string_literal: true
+
 #
 # pick.rb
 #
 module Puppet::Parser::Functions
-  newfunction(:pick, :type => :rvalue, :doc => <<-EOS
+  newfunction(:pick, type: :rvalue, doc: <<-EOS
     @summary
-      This function is similar to a coalesce function in SQL in that it will return
+      This function will return
       the first value in a list of values that is not undefined or an empty string.
+
+    This function is similar to a coalesce function in SQL.
 
     @return
       the first value in a list of values that is not undefined or an empty string.
@@ -21,7 +25,7 @@ module Puppet::Parser::Functions
       Enterprise Console are brought into Puppet as top-scope variables), and,
       failing that, will use a default value of 1.449.
   EOS
-             ) do |args|
+  ) do |args|
     args = args.compact
     args.delete(:undef)
     args.delete(:undefined)

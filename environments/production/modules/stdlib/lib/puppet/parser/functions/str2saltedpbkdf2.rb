@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 # str2saltedpbkdf2.rb
 #  Please note: This function is an implementation of a Ruby class and as such may not be entirely UTF8 compatible. To ensure compatibility please use this function with Ruby 2.4.0 or greater - https://bugs.ruby-lang.org/issues/10085.
 #
 module Puppet::Parser::Functions
-  newfunction(:str2saltedpbkdf2, :type => :rvalue, :doc => <<-DOC
+  newfunction(:str2saltedpbkdf2, type: :rvalue, doc: <<-DOC
     @summary Convert a string into a salted SHA512 PBKDF2 password hash like requred for OS X / macOS 10.8+
 
     Convert a string into a salted SHA512 PBKDF2 password hash like requred for OS X / macOS 10.8+.
@@ -11,7 +13,7 @@ module Puppet::Parser::Functions
     the pasword using the parameters you provide to the user resource.
 
     @example Plain text password and salt
-      $pw_info = str2saltedpbkdf2('Pa55w0rd', 'Using s0m3 s@lt', 50000)
+      $pw_info = str2saltedpbkdf2('Pa55w0rd', 'Use a s@lt h3r3 th@t is 32 byt3s', 50000)
       user { 'jdoe':
         ensure     => present,
         iterations => $pw_info['interations'],
@@ -21,7 +23,7 @@ module Puppet::Parser::Functions
 
     @example Sensitive password and salt
       $pw = Sensitive.new('Pa55w0rd')
-      $salt = Sensitive.new('Using s0m3 s@lt')
+      $salt = Sensitive.new('Use a s@lt h3r3 th@t is 32 byt3s')
       $pw_info = Sensitive.new(str2saltedpbkdf2($pw, $salt, 50000))
       user { 'jdoe':
         ensure     => present,
@@ -33,7 +35,7 @@ module Puppet::Parser::Functions
     @return [Hash]
       Provides a hash containing the hex version of the password, the hex version of the salt, and iterations.
   DOC
-             ) do |args|
+  ) do |args|
     require 'openssl'
 
     raise ArgumentError, "str2saltedpbkdf2(): wrong number of arguments (#{args.size} for 3)" if args.size != 3
