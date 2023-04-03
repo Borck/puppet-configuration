@@ -20,15 +20,16 @@ resources_win_packages: {
 
   office365proplus : { profile : office_365proplus, ensure : present },
 
-  nanazip           : { profile : office, afterInstall : pkgpost_sevenzip },
+  nanazip.portable          : { profile : office, afterInstall : pkgpost_sevenzip }, # Win11 alternative to 7zip
   # 7zip           : { profile : office, afterInstall : pkgpost_sevenzip },
-  # TODO: use some alternative with Windows 11 Context menu like NanaZip
+  
+  powertoys           : { profile : workflow }, # replaces JCPicker, LockHunter, capture2text, (BulkRename), SVG Explorer Extension
 
   ### office advanced #########
   trid         : { profile : [administration, office_advanced, dev] }, # identify file types from their binary signatures
   inkscape     : { profile : office_advanced, afterInstall : pkgpost_inkscape },
   yed          : { profile : [office_advanced, dev_basics] },
-  capture2text : { profile : office_advanced },
+  #capture2text : { profile : office_advanced },
   screentogif  : { profile : office_advanced }, #screenshot animation
   #jcpicker     : { profile : office_advanced }, #installer not working (since 20190605)
 
@@ -65,14 +66,14 @@ resources_win_packages: {
   },
 
   bulkrenameutility     : { profile : [office_advanced, administation, dev_basics], afterInstall : pkgpost_bulkrenameutility },
-  lockhunter            : { profile : [office_advanced, administation, dev_basics] },
+  #lockhunter            : { profile : [office_advanced, administation, dev_basics] },
   dupeguru              : { profile : [administation, dev_basics] },
   windirstat            : { profile : [administation] },
   bulk-crap-uninstaller : { profile : [administation] },
   runasdate             : { profile : [administration, dev_basics] },
   sandboxie             : { profile : [administration, dev_basics] },
 
-  puppet-agent : { profile : [puppet], ensure : '5.4.0' },
+  puppet-agent : { profile : [puppet] },
   pdk : { profile : [puppet_admin] },
 
   # network tools
