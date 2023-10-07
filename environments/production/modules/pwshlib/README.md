@@ -1,62 +1,33 @@
-# pwshlib
+# ruby-pwsh
 
-This module enables you to leverage the `ruby-pwsh` gem to execute PowerShell from within your Puppet providers without having to instantiate and tear down a PowerShell process for each command called.
-It supports Windows PowerShell as well as PowerShell Core - if you're running **PowerShell v3+**, this gem supports you.
+> _The PowerShell gem._
+
+This gem enables you to execute PowerShell from within ruby without having to instantiate and tear down a PowerShell process for each command called.
+It supports Windows PowerShell as well as PowerShell Core (and, soon, _just_ PowerShell) - if you're running *PowerShell v3+, this gem supports you.
 
 The `Manager` class enables you to execute and interoperate with PowerShell from within ruby, leveraging the strengths of both languages as needed.
 
-## Prerequisites
+## Installation
 
-Include `puppetlabs-pwshlib` as a dependency in your module and you can leverage it in your providers by using a requires statement, such as in this example:
+Add this line to your application's Gemfile:
 
 ```ruby
-require 'puppet/resource_api/simple_provider'
-begin
-  require 'ruby-pwsh'
-rescue LoadError
-  raise 'Could not load the "ruby-pwsh" library; is the dependency module puppetlabs-pwshlib installed in this environment?'
-end
-
-# Implementation for the foo type using the Resource API.
-class Puppet::Provider::Foo::Foo < Puppet::ResourceApi::SimpleProvider
-  def get(context)
-    context.debug("PowerShell Path: #{Pwsh::Manager.powershell_path}")
-    context.debug('Returning pre-canned example data')
-    [
-      {
-        name: 'foo',
-        ensure: 'present',
-      },
-      {
-        name: 'bar',
-        ensure: 'present',
-      },
-    ]
-  end
-
-  def create(context, name, should)
-    context.notice("Creating '#{name}' with #{should.inspect}")
-  end
-
-  def update(context, name, should)
-    context.notice("Updating '#{name}' with #{should.inspect}")
-  end
-
-  def delete(context, name)
-    context.notice("Deleting '#{name}'")
-  end
-end
+gem 'ruby-pwsh'
 ```
 
-Aside from adding it as a dependency to your module metadata, you will probably also want to include it in your `.fixtures.yml` file:
+And then execute:
 
-```yaml
-fixtures:
-  forge_modules:
-    pwshlib: "puppetlabs/pwshlib"
+```shell
+bundle install
 ```
 
-## Using the Library
+Or install it yourself as:
+
+```shell
+gem install ruby-pwsh
+```
+
+## Usage
 
 Instantiating the manager can be done using some defaults:
 
@@ -80,13 +51,33 @@ Execution can be done with relatively little additional work - pass the command 
 posh = Pwsh::Manager.instance(Pwsh::Manager.powershell_path, Pwsh::Manager.powershell_args)
 # Pretty print the output of `$PSVersionTable` to validate the version of PowerShell running
 # Note that the output is a hash with a few different keys, including stdout.
-Puppet.debug(posh.execute('$PSVersionTable'))
+pp(posh.execute('$PSVersionTable'))
 # Lets reduce the noise a little and retrieve just the version number:
 # Note: We cast to a string because PSVersion is actually a Version object.
-Puppet.debug(posh.execute('[String]$PSVersionTable.PSVersion'))
+pp(posh.execute('[String]$PSVersionTable.PSVersion'))
 # We could store this output to a ruby variable if we wanted, for further use:
 ps_version = posh.execute('[String]$PSVersionTable.PSVersion')[:stdout].strip
-Puppet.debug("The PowerShell version of the currently running Manager is #{ps_version}")
+pp("The PowerShell version of the currently running Manager is #{ps_version}")
 ```
 
-For more information, please review the [online reference documentation for the gem](https://rubydoc.info/gems/ruby-pwsh).
+## Reference
+
+You can find the full reference documentation online, [here](https://rubydoc.info/gems/ruby-pwsh).
+
+<!-- ## Development
+
+After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+
+To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org). -->
+
+## Supported Operating Systems
+
+The following platforms are supported:
+
+- Windows
+- CentOS
+- Debian
+- Fedora
+- OSX
+- RedHat
+- Ubuntu

@@ -55,7 +55,7 @@ module Pwsh
         # ignore any errors trying to tear down this unusable instance
         begin
           manager.exit unless manager.nil? # rubocop:disable Style/SafeNavigation
-        rescue
+        rescue StandardError
           nil
         end
         @@instances[key] = Manager.new(cmd, args, options)
@@ -136,14 +136,14 @@ module Pwsh
       stdin, @stdout, @stderr, @ps_process = Open3.popen3("#{native_cmd} #{ps_args.join(' ')}")
       stdin.close
 
-      # Puppet.debug "#{Time.now} #{cmd} is running as pid: #{@ps_process[:pid]}"
+      # TODO: Log a debug for "#{Time.now} #{cmd} is running as pid: #{@ps_process[:pid]}"
 
       # Wait up to 180 seconds in 0.2 second intervals to be able to open the pipe.
       # If the pipe_timeout is ever specified as less than the sleep interval it will
       # never try to connect to a pipe and error out as if a timeout occurred.
       sleep_interval = 0.2
       (pipe_timeout / sleep_interval).to_int.times do
-        begin
+        begin # rubocop:disable Style/RedundantBegin
           @pipe = if Pwsh::Util.on_windows?
                     # Pipe is opened in binary mode and must always <- always what??
                     File.open(pipe_path, 'r+b')
@@ -151,13 +151,13 @@ module Pwsh
                     UNIXSocket.new(pipe_path)
                   end
           break
-        rescue
+        rescue StandardError
           sleep sleep_interval
         end
       end
       if @pipe.nil?
         # Tear down and kill the process if unable to connect to the pipe; failure to do so
-        # results in zombie processes being left after the puppet run. We discovered that
+        # results in zombie processes being left after a caller run. We discovered that
         # closing @ps_process via .kill instead of using this method actually kills the
         # watcher and leaves an orphaned process behind. Failing to close stdout and stderr
         # also leaves clutter behind, so explicitly close those too.
@@ -166,7 +166,8 @@ module Pwsh
         Process.kill('KILL', @ps_process[:pid]) if @ps_process.alive?
         raise "Failure waiting for PowerShell process #{@ps_process[:pid]} to start pipe server"
       end
-      # Puppet.debug "#{Time.now} PowerShell initialization complete for pid: #{@ps_process[:pid]}"
+
+      # TODO: Log a debug for "#{Time.now} PowerShell initialization complete for pid: #{@ps_process[:pid]}"
 
       at_exit { exit }
     end
@@ -207,38 +208,8 @@ module Pwsh
       out[:stderr] = out[:stderr].nil? ? [] : [out[:stderr]]
       out[:stderr] += err unless err.nil?
       out[:native_stdout] = native_stdout
-
       out
     end
-
-    # TODO: Is this needed in the code manager? When brought into the module, should this be
-    #       added as helper code leveraging this gem?
-    # Executes PowerShell code using the settings from a populated Puppet Exec Resource Type
-    # def execute_resource(powershell_code, working_dir, timeout_ms, environment)
-    #   working_dir = resource[:cwd]
-    #   if (!working_dir.nil?)
-    #     fail "Working directory '#{working_dir}' does not exist" unless File.directory?(working_dir)
-    #   end
-    #   timeout_ms = resource[:timeout].nil? ? nil : resource[:timeout] * 1000
-    #   environment_variables = resource[:environment].nil? ? [] : resource[:environment]
-
-    #   result = execute(powershell_code, timeout_ms, working_dir, environment_variables)
-
-    #   stdout     = result[:stdout]
-    #   native_out = result[:native_out]
-    #   stderr     = result[:stderr]
-    #   exit_code  = result[:exit_code]
-
-    #   # unless stderr.nil?
-    #   #   stderr.each { |e| Puppet.debug "STDERR: #{e.chop}" unless e.empty? }
-    #   # end
-
-    #   # Puppet.debug "STDERR: #{result[:errormessage]}" unless result[:errormessage].nil?
-
-    #   output = Puppet::Util::Execution::ProcessOutput.new(stdout.to_s + native_out.to_s, exit_code)
-
-    #   return output, output
-    # end
 
     # Tear down the instance of the manager, shutting down the pipe and process.
     #
@@ -246,13 +217,13 @@ module Pwsh
     def exit
       @usable = false
 
-      # Puppet.debug "Pwsh exiting..."
+      # TODO: Log a debug for "Pwsh exiting..."
 
       # Ask PowerShell pipe server to shutdown if its still running
       # rather than expecting the pipe.close to terminate it
       begin
         write_pipe(pipe_command(:exit)) unless @pipe.closed?
-      rescue
+      rescue StandardError
         nil
       end
 
@@ -273,8 +244,8 @@ module Pwsh
     # @return [String] full path to the bootstrap template
     def self.template_path
       # A PowerShell -File compatible path to bootstrap the instance
-      path = File.expand_path('../templates', __FILE__)
-      path = File.join(path, 'init.ps1').gsub('/', '\\')
+      path = File.expand_path('templates', __dir__)
+      path = File.join(path, 'init.ps1').tr('/', '\\')
       "\"#{path}\""
     end
 
@@ -296,7 +267,7 @@ module Pwsh
 
         # Lower bound protection. The polling resolution is only 50ms.
         timeout_ms = 50 if timeout_ms < 50
-      rescue
+      rescue StandardError
         timeout_ms = 300 * 1000
       end
 
@@ -313,41 +284,40 @@ module Pwsh
             env_name = Regexp.last_match(1)
             value    = Regexp.last_match(2)
             if environment.include?(env_name) || environment.include?(env_name.to_sym)
-              # Puppet.warning("Overriding environment setting '#{env_name}' with '#{value}'")
+              # TODO: log a warning for "Overriding environment setting '#{env_name}' with '#{value}'"
             end
             environment[env_name] = value
           else # rubocop:disable Style/EmptyElse
-            # TODO: Implement logging
-            # Puppet.warning("Cannot understand environment setting #{setting.inspect}")
+            # TODO: log a warning for "Cannot understand environment setting #{setting.inspect}"
           end
         end
       end
       # Convert the Ruby Hashtable into PowerShell syntax
-      exec_environment_variables = '@{'
+      additional_environment_variables = '@{'
       unless environment.empty?
         environment.each do |name, value|
           # PowerShell escapes single quotes inside a single quoted string by just adding
           # another single quote i.e. a value of foo'bar turns into 'foo''bar' when single quoted.
           ps_name  = name.gsub('\'', '\'\'')
           ps_value = value.gsub('\'', '\'\'')
-          exec_environment_variables += " '#{ps_name}' = '#{ps_value}';"
+          additional_environment_variables += " '#{ps_name}' = '#{ps_value}';"
         end
       end
-      exec_environment_variables += '}'
+      additional_environment_variables += '}'
 
       # PS Side expects Invoke-PowerShellUserCode is always the return value here
       # TODO: Refactor to use <<~ as soon as we can :sob:
-      <<-CODE
-$params = @{
-  Code                     = @'
-#{powershell_code}
-'@
-  TimeoutMilliseconds      = #{timeout_ms}
-  WorkingDirectory         = "#{working_dir}"
-  ExecEnvironmentVariables = #{exec_environment_variables}
-}
+      <<~CODE
+        $params = @{
+          Code                     = @'
+        #{powershell_code}
+        '@
+          TimeoutMilliseconds      = #{timeout_ms}
+          WorkingDirectory         = "#{working_dir}"
+          AdditionalEnvironmentVariables = #{additional_environment_variables}
+        }
 
-Invoke-PowerShellUserCode @params
+        Invoke-PowerShellUserCode @params
       CODE
     end
 
@@ -365,10 +335,10 @@ Invoke-PowerShellUserCode @params
     #
     # @return [String] the absolute path to the PowerShell executable. Returns 'powershell.exe' if no more specific path found.
     def self.powershell_path
-      if File.exist?("#{ENV['SYSTEMROOT']}\\sysnative\\WindowsPowershell\\v1.0\\powershell.exe")
-        "#{ENV['SYSTEMROOT']}\\sysnative\\WindowsPowershell\\v1.0\\powershell.exe"
-      elsif File.exist?("#{ENV['SYSTEMROOT']}\\system32\\WindowsPowershell\\v1.0\\powershell.exe")
-        "#{ENV['SYSTEMROOT']}\\system32\\WindowsPowershell\\v1.0\\powershell.exe"
+      if File.exist?("#{ENV.fetch('SYSTEMROOT', nil)}\\sysnative\\WindowsPowershell\\v1.0\\powershell.exe")
+        "#{ENV.fetch('SYSTEMROOT', nil)}\\sysnative\\WindowsPowershell\\v1.0\\powershell.exe"
+      elsif File.exist?("#{ENV.fetch('SYSTEMROOT', nil)}\\system32\\WindowsPowershell\\v1.0\\powershell.exe")
+        "#{ENV.fetch('SYSTEMROOT', nil)}\\system32\\WindowsPowershell\\v1.0\\powershell.exe"
       else
         'powershell.exe'
       end
@@ -382,7 +352,7 @@ Invoke-PowerShellUserCode @params
       # Convert all the key names to upcase so we can be sure to find PATH etc.
       # Also while ruby can have difficulty changing the case of some UTF8 characters, we're
       # only going to use plain ASCII names so this is safe.
-      current_path = Pwsh::Util.on_windows? ? ENV.select { |k, _| k.upcase == 'PATH' }.values[0] : ENV['PATH']
+      current_path = Pwsh::Util.on_windows? ? ENV.select { |k, _| k.casecmp('PATH').zero? }.values[0] : ENV.fetch('PATH', nil)
       current_path = '' if current_path.nil?
 
       # Prefer any additional paths
@@ -391,12 +361,15 @@ Invoke-PowerShellUserCode @params
 
       # If we're on Windows, try the default installation locations as a last resort.
       # https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-windows?view=powershell-6#msi
+      # https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-windows?view=powershell-7.1
       if Pwsh::Util.on_windows?
-        # TODO: What about PS 7? or 8?
+        # TODO: What about PS 8?
         # TODO: Need to check on French/Turkish windows if ENV['PROGRAMFILES'] parses UTF8 names correctly
         # TODO: Need to ensure ENV['PROGRAMFILES'] is case insensitive, i.e. ENV['PROGRAMFiles'] should also resolve on Windows
-        search_paths += ";#{ENV['PROGRAMFILES']}\\PowerShell\\6" \
-                        ";#{ENV['PROGRAMFILES(X86)']}\\PowerShell\\6"
+        search_paths += ";#{ENV.fetch('PROGRAMFILES', nil)}\\PowerShell\\6" \
+                        ";#{ENV.fetch('PROGRAMFILES(X86)', nil)}\\PowerShell\\6" \
+                        ";#{ENV.fetch('PROGRAMFILES', nil)}\\PowerShell\\7" \
+                        ";#{ENV.fetch('PROGRAMFILES(X86)', nil)}\\PowerShell\\7"
       end
       raise 'No paths discovered to search for Powershell!' if search_paths.split(File::PATH_SEPARATOR).empty?
 
@@ -432,7 +405,7 @@ Invoke-PowerShellUserCode @params
     #
     # @return[String] Unique string representing the manager instance.
     def self.instance_key(cmd, args, options)
-      cmd + args.join(' ') + options[:debug].to_s
+      cmd + args.join(' ') + options.to_s
     end
 
     # Return whether or not a particular stream is valid and readable
@@ -459,7 +432,7 @@ Invoke-PowerShellUserCode @params
         # as this resolves to a HANDLE and then calls the Windows API
         !stream.stat.nil?
     # Any exceptions mean the stream is dead
-    rescue
+    rescue StandardError
       false
     end
 
@@ -523,9 +496,7 @@ Invoke-PowerShellUserCode @params
     #
     # @return nil
     def write_pipe(input)
-      # For Compat with Ruby 2.1 and lower, it's important to use syswrite and
-      # not write - otherwise, the pipe breaks after writing 1024 bytes.
-      written = @pipe.syswrite(input)
+      written = @pipe.write(input)
       @pipe.flush
 
       if written != input.length # rubocop:disable Style/GuardClause
@@ -543,7 +514,7 @@ Invoke-PowerShellUserCode @params
     def read_from_pipe(pipe, timeout = 0.1, &_block)
       if self.class.readable?(pipe, timeout)
         l = pipe.readpartial(4096)
-        # Puppet.debug "#{Time.now} PIPE> #{l}"
+        # TODO: Log a debug for "#{Time.now} PIPE> #{l}"
         # Since readpartial may return a nil at EOF, skip returning that value
         yield l unless l.nil?
       end
@@ -567,7 +538,7 @@ Invoke-PowerShellUserCode @params
       read_from_pipe(pipe, 0) { |s| output << s } while self.class.readable?(pipe)
 
       # String has been binary up to this point, so force UTF-8 now
-      output == [] ? [] : [output.join('').force_encoding(Encoding::UTF_8)]
+      output == [] ? [] : [output.join.force_encoding(Encoding::UTF_8)]
     end
 
     # Open threads and pipes to read stdout and stderr from the PowerShell manager,
@@ -601,7 +572,7 @@ Invoke-PowerShellUserCode @params
         buffer
       end
 
-      # Puppet.debug "Waited #{Time.now - start_time} total seconds."
+      # TODO: Log a debug for "Waited #{Time.now - start_time} total seconds."
 
       # Block until sysread has completed or errors
       begin
@@ -618,8 +589,8 @@ Invoke-PowerShellUserCode @params
 
       [
         output,
-        stdout == [] ? nil : stdout.join(''), # native stdout
-        stderr_reader.value                   # native stderr
+        stdout == [] ? nil : stdout.join, # native stdout
+        stderr_reader.value # native stderr
       ]
     ensure
       # Failsafe if the prior unlock was never reached / Mutex wasn't unlocked

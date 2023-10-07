@@ -1,6 +1,6 @@
 {
   "name": "ianoberst-xml_fragment",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "Ian Oberst <ian.oberst@gmail.com>",
   "summary": "A native Puppet module that manages XML documents using REXML.",
   "license": "MIT",
@@ -8,9 +8,8 @@
   "project_page": "https://github.com/Areson/xml_fragment",
   "issues_url": "https://github.com/Areson/xml_fragment/issues",
   "dependencies": [
-  
+
   ],
-  "data_provider": null,
   "operatingsystem_support": [
     {
       "operatingsystem": "RedHat"
@@ -50,7 +49,7 @@
   "requirements": [
     {
       "name": "puppet",
-      "version_requirement": ">= 3.0.0 < 7.0.0"
+      "version_requirement": ">= 3.0.0 < 9.0.0"
     }
   ],
   "tags": [
@@ -61,7 +60,7 @@
     "type",
     "provider"
   ],
-  "pdk-version": "1.6.0",
-  "template-url": "file:///opt/puppetlabs/pdk/share/cache/pdk-templates.git",
-  "template-ref": "1.6.0-0-gf5564c0"
+  "pdk-version": "3.0.0",
+  "template-url": "pdk-default#3.0.0",
+  "template-ref": "tags/3.0.0-0-g056e50d"
 }
