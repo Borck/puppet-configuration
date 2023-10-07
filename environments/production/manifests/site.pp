@@ -64,9 +64,9 @@ class setup_win {
   ######################################################################################################################
 
   $username   = $::identity['user']
-  $is_my_pc   = 'borck' in downcase($::hostname)
-  $is_my_stationary_pc   = $is_my_pc and 'PC' in downcase($::hostname)
-  $is_at_pc   = $::hostname =~ /^AT\d+$/
+  $is_my_pc   = 'borck' in downcase($::networking['hostname'])
+  $is_my_stationary_pc   = $is_my_pc and 'PC' in downcase($::networking['hostname'])
+  $is_at_pc   = $::networking['hostname'] =~ /^AT\d+$/
   $is_my_user = downcase($username) =~ /\\.*borck/
   #'\\borck' in downcase($username)
   $is_render_pc = $is_my_stationary_pc or $is_at_pc
@@ -936,7 +936,7 @@ class package_upgrade_task (
 
   scheduled_task { 'Chocolatey Upgrade All':
     enabled   => true,
-    command   => "${::system32}\\WindowsPowerShell\\v1.0\\powershell.exe",
+    command   => "${::os['windows']['system32']}\\WindowsPowerShell\\v1.0\\powershell.exe",
     arguments => "-NoProfile -NoLogo -NonInteractive -ExecutionPolicy Bypass -File \"${cup_script}\"",
     user      => 'system',
     trigger   => [{
@@ -956,8 +956,8 @@ class package_upgrade_task (
 
 
 node default {
-  if $::operatingsystem != 'windows'{
-    fail("Unsupported OS ${::operatingsystem}")
+  if $::os['family'] != 'windows'{
+    fail("Unsupported OS $::os['family']")
   }
 
   # class { '::puppet_agent':
